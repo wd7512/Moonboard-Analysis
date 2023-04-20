@@ -1,6 +1,0 @@
-TO DO:
-
-We need to clean up the cleaning file
-
-We need a way of reversing the training data
-    To display routes
