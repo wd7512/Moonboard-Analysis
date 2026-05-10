@@ -5,6 +5,16 @@ requires-python = ">=3.11"
 dependencies = [
     "numpy",
     "matplotlib",
+    "torch",
+    "pandas",
+    "scikit-learn",
+    "seaborn",
+    "adjusttext",
+]
+
+[project.optional-dependencies]
+dev = [
+    "jupyter",
 ]
 
 [build-system]
