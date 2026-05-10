@@ -1,0 +1,23 @@
+[project]
+name = "moonboard-analysis"
+version = "0.1.0"
+description = "Moonboard climbing route analysis"
+requires-python = ">=3.11"
+dependencies = [
+    "torch",
+    "pandas",
+    "scikit-learn",
+    "seaborn",
+    "adjustText",
+    "numpy",
+    "matplotlib",
+    "scipy",
+]
+
+[project.optional-dependencies]
+dev = [
+    "jupyter",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = []
