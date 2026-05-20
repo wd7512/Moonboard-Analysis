@@ -44,8 +44,8 @@ def main() -> None:
 
     print(f"Loading data from {data_path}")
     data = np.load(data_path, allow_pickle=True)
-    grades = data[:, 0]
-    features = data[:, 1:].astype(np.float32)
+    grades = np.array([row[0] for row in data], dtype=float)
+    features = np.stack([row[1] for row in data]).astype(np.float32)
     print(f"Data shape: {features.shape}")
 
     train_features, test_features, train_grades, test_grades = train_test_split(
@@ -61,6 +61,7 @@ def main() -> None:
         learning_rate=args.learning_rate,
         weight_decay=args.weight_decay,
         seed=args.seed,
+        bounded=True,
         data_path=data_path,
         model_save_path=str(output_dir / "Autoencoder_Moonboard.pth"),
     )
@@ -113,6 +114,7 @@ def main() -> None:
                     "input_dim": config.input_dim,
                     "bottleneck_dim": config.bottleneck_dim,
                     "hidden_dim": config.hidden_dim,
+                    "bounded": config.bounded,
                 },
             },
             model_path,

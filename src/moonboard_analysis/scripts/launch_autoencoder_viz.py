@@ -55,8 +55,9 @@ def _load_model(model_path: str, device: torch.device) -> Autoencoder:
     config = checkpoint.get("config", {})
     input_dim = config.get("input_dim", AutoencoderConfig.input_dim)
     bottleneck_dim = config.get("bottleneck_dim", AutoencoderConfig.bottleneck_dim)
+    bounded = config.get("bounded", False)
 
-    model = Autoencoder(input_dim=input_dim, bottleneck_dim=bottleneck_dim)
+    model = Autoencoder(input_dim=input_dim, bottleneck_dim=bottleneck_dim, bounded=bounded)
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)
     model.eval()
@@ -139,6 +140,7 @@ def create_app(
     bottleneck_dim: int = 8,
     route_indices: np.ndarray | None = None,
     repeats: np.ndarray | None = None,
+    bounded: bool = False,
 ) -> gr.Blocks:
     """Create the Gradio Blocks interface.
 
@@ -153,6 +155,7 @@ def create_app(
         bottleneck_dim: Dimension of the latent space.
         route_indices: Indices of routes to show in dropdown.
         repeats: Repeat counts for each route.
+        bounded: Whether the model uses tanh-bounded latent space.
 
     Returns:
         Gradio Blocks app.
@@ -163,6 +166,8 @@ def create_app(
         repeats = np.zeros(len(grades), dtype=int)
 
     route_labels = _build_route_labels(grades, repeats, route_indices)
+
+    slider_ranges = [(-1.0, 1.0)] * bottleneck_dim if bounded else latent_ranges
 
     with gr.Blocks(title="Moonboard Autoencoder Explorer") as app:
         gr.Markdown("# Moonboard Autoencoder — Latent Space Explorer")
@@ -189,7 +194,7 @@ def create_app(
                 gr.Markdown("### Latent Dimensions")
                 sliders: list = []
                 for dim in range(bottleneck_dim):
-                    low, high = latent_ranges[dim]
+                    low, high = slider_ranges[dim]
                     slider = gr.Slider(
                         minimum=low,
                         maximum=high,
@@ -255,7 +260,7 @@ def create_app(
         def randomize_sliders() -> list:
             values = []
             for dim in range(bottleneck_dim):
-                low, high = latent_ranges[dim]
+                low, high = slider_ranges[dim]
                 values.append(float(np.random.uniform(low, high)))
             return values
 
@@ -360,6 +365,7 @@ def main() -> None:
 
     print("Computing latent space ranges...")
     bottleneck_dim = model.bottleneck_dim
+    bounded = model.bounded
     latent_ranges = _compute_latent_ranges(model, features, device, bottleneck_dim)
 
     mapper = GridMapper()
@@ -368,7 +374,7 @@ def main() -> None:
     print("Building Gradio interface...")
     app = create_app(
         model, grades, features, latent_ranges, mapper, renderer, device,
-        bottleneck_dim, route_indices, repeats,
+        bottleneck_dim, route_indices, repeats, bounded,
     )
 
     print(f"Launching app on http://localhost:{args.port}")

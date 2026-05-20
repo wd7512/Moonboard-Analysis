@@ -11,6 +11,7 @@ class AutoencoderConfig:
     learning_rate: float = 0.001
     weight_decay: float = 1e-5
     seed: int = 42
+    bounded: bool = True
     data_path: str = "archive/Legacy/2016TrainingData164.npy"
     model_save_path: str = "Autoencoder_Moonboard.pth"
 

@@ -25,7 +25,7 @@ def train_autoencoder(
     )
     test_loader = DataLoader(test_dataset, batch_size=config.batch_size)
 
-    model = Autoencoder(config.input_dim, config.bottleneck_dim).to(device)
+    model = Autoencoder(config.input_dim, config.bottleneck_dim, bounded=config.bounded).to(device)
     criterion = nn.MSELoss()
     optimizer = optim.Adam(
         model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay
