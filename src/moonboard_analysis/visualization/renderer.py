@@ -73,6 +73,7 @@ class GridRenderer:
         orig_grid = self._to_binary(original, threshold)
         recon_grid = self._to_binary(reconstructed, threshold)
 
+        plt.close("all")
         fig, axes = plt.subplots(1, 3, figsize=(18, 10))
         fig.patch.set_facecolor(self._BACKGROUND_COLOR)
         fig.suptitle(title, color="white", fontsize=16, fontweight="bold")

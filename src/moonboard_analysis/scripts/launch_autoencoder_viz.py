@@ -15,7 +15,6 @@ from pathlib import Path
 
 import gradio as gr
 import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
@@ -207,7 +206,6 @@ def create_app(
             with gr.Column(scale=2):
                 mse_text = gr.Textbox(label="Reconstruction MSE", interactive=False)
                 comparison_plot = gr.Plot(label="Original vs Reconstructed")
-                prev_fig_state = gr.State(None)
 
         def _get_route_index(label: str) -> int:
             return int(label.split("#")[1].split(" ")[0])
@@ -224,16 +222,15 @@ def create_app(
             route_label: str,
             threshold: float,
             *latent_values: float,
-            prev_fig: matplotlib.figure.Figure | None = None,
         ) -> tuple:
-            if prev_fig is not None:
-                plt.close(prev_fig)
-
             idx = _get_route_index(route_label)
             original_vec = features[idx]
             threshold = float(threshold)
 
-            latent = np.array([float(v) for v in latent_values], dtype=np.float32).reshape(1, -1)
+            latent = np.array(
+                [0.0 if v is None else float(v) for v in latent_values],
+                dtype=np.float32,
+            ).reshape(1, -1)
             latent_tensor = torch.tensor(latent, dtype=torch.float32).to(device)
             with torch.no_grad():
                 reconstructed = model.decode(latent_tensor).cpu().numpy()[0]
@@ -249,7 +246,7 @@ def create_app(
                 threshold=threshold,
             )
 
-            return fig, f"{mse:.6f}", fig
+            return fig, f"{mse:.6f}"
 
         def reset_sliders(route_label: str) -> list:
             values = update_from_route(route_label)
@@ -266,8 +263,8 @@ def create_app(
             deps = [route_dropdown, threshold_slider] + sliders
             slider.change(
                 fn=update_visualization,
-                inputs=deps + [prev_fig_state],
-                outputs=[comparison_plot, mse_text, prev_fig_state],
+                inputs=deps,
+                outputs=[comparison_plot, mse_text],
             )
 
         route_dropdown.change(
@@ -276,14 +273,14 @@ def create_app(
             outputs=sliders,
         ).then(
             fn=update_visualization,
-            inputs=[route_dropdown, threshold_slider] + sliders + [prev_fig_state],
-            outputs=[comparison_plot, mse_text, prev_fig_state],
+            inputs=[route_dropdown, threshold_slider] + sliders,
+            outputs=[comparison_plot, mse_text],
         )
 
         threshold_slider.change(
             fn=update_visualization,
-            inputs=[route_dropdown, threshold_slider] + sliders + [prev_fig_state],
-            outputs=[comparison_plot, mse_text, prev_fig_state],
+            inputs=[route_dropdown, threshold_slider] + sliders,
+            outputs=[comparison_plot, mse_text],
         )
 
         reset_btn.click(
@@ -292,8 +289,8 @@ def create_app(
             outputs=sliders,
         ).then(
             fn=update_visualization,
-            inputs=[route_dropdown, threshold_slider] + sliders + [prev_fig_state],
-            outputs=[comparison_plot, mse_text, prev_fig_state],
+            inputs=[route_dropdown, threshold_slider] + sliders,
+            outputs=[comparison_plot, mse_text],
         )
 
         random_btn.click(
@@ -302,8 +299,8 @@ def create_app(
             outputs=sliders,
         ).then(
             fn=update_visualization,
-            inputs=[route_dropdown, threshold_slider] + sliders + [prev_fig_state],
-            outputs=[comparison_plot, mse_text, prev_fig_state],
+            inputs=[route_dropdown, threshold_slider] + sliders,
+            outputs=[comparison_plot, mse_text],
         )
 
         app.load(
@@ -312,8 +309,8 @@ def create_app(
             outputs=sliders,
         ).then(
             fn=update_visualization,
-            inputs=[route_dropdown, threshold_slider] + sliders + [prev_fig_state],
-            outputs=[comparison_plot, mse_text, prev_fig_state],
+            inputs=[route_dropdown, threshold_slider] + sliders,
+            outputs=[comparison_plot, mse_text],
         )
 
     return app
