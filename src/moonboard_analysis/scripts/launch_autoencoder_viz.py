@@ -64,12 +64,49 @@ def _load_model(model_path: str, device: torch.device) -> Autoencoder:
     return model
 
 
-def _load_data(data_path: str) -> tuple[np.ndarray, np.ndarray]:
-    """Load training data and return grades and features."""
+def _load_data(data_path: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Load training data and return grades, features, and repeats."""
     data = np.load(data_path, allow_pickle=True)
     grades = np.array([row[0] for row in data], dtype=float)
     features = np.stack([row[1] for row in data]).astype(np.float32)
-    return grades, features
+
+    repeats_path = Path(data_path).parent / "2016Repeats164.npy"
+    if repeats_path.exists():
+        repeats = np.load(repeats_path)
+    else:
+        repeats = np.zeros(len(grades), dtype=int)
+    return grades, features, repeats
+
+
+def _get_top_routes_per_grade(
+    grades: np.ndarray,
+    repeats: np.ndarray,
+    n_per_grade: int = 4,
+) -> np.ndarray:
+    """Return indices of the top N most popular routes per grade."""
+    selected: list[int] = []
+    for grade_idx in range(len(GRADE_MAP)):
+        mask = grades == grade_idx
+        grade_indices = np.where(mask)[0]
+        grade_repeats = repeats[mask]
+        top_local = np.argsort(grade_repeats)[-n_per_grade:][::-1]
+        selected.extend(grade_indices[top_local].tolist())
+    return np.array(selected, dtype=int)
+
+
+def _build_route_labels(
+    grades: np.ndarray,
+    repeats: np.ndarray,
+    route_indices: np.ndarray,
+) -> list[str]:
+    """Build dropdown labels for filtered routes."""
+    labels = []
+    for idx in route_indices:
+        grade_idx = int(grades[idx])
+        grade_str = _decode_grade(grade_idx)
+        rep = int(repeats[idx])
+        labels.append(f"Route #{idx} — Grade: {grade_str} — {rep:,} repeats")
+    return labels
 
 
 def _compute_latent_ranges(
@@ -92,15 +129,6 @@ def _compute_latent_ranges(
     return ranges
 
 
-def _build_route_labels(grades: np.ndarray) -> list[str]:
-    """Build dropdown labels for all routes."""
-    labels = []
-    for i, grade_idx in enumerate(grades):
-        grade_str = _decode_grade(grade_idx)
-        labels.append(f"Route #{i} — Grade: {grade_str}")
-    return labels
-
-
 def create_app(
     model: Autoencoder,
     grades: np.ndarray,
@@ -110,6 +138,8 @@ def create_app(
     renderer: GridRenderer,
     device: torch.device,
     bottleneck_dim: int = 8,
+    route_indices: np.ndarray | None = None,
+    repeats: np.ndarray | None = None,
 ) -> gr.Blocks:
     """Create the Gradio Blocks interface.
 
@@ -122,11 +152,18 @@ def create_app(
         renderer: GridRenderer for visualization.
         device: Torch device for model inference.
         bottleneck_dim: Dimension of the latent space.
+        route_indices: Indices of routes to show in dropdown.
+        repeats: Repeat counts for each route.
 
     Returns:
         Gradio Blocks app.
     """
-    route_labels = _build_route_labels(grades)
+    if route_indices is None:
+        route_indices = np.arange(len(grades))
+    if repeats is None:
+        repeats = np.zeros(len(grades), dtype=int)
+
+    route_labels = _build_route_labels(grades, repeats, route_indices)
 
     with gr.Blocks(title="Moonboard Autoencoder Explorer") as app:
         gr.Markdown("# Moonboard Autoencoder — Latent Space Explorer")
@@ -318,8 +355,11 @@ def main() -> None:
     model = _load_model(args.model_path, device)
 
     print(f"Loading data from {args.data_path}")
-    grades, features = _load_data(args.data_path)
+    grades, features, repeats = _load_data(args.data_path)
     print(f"Loaded {len(features)} routes with {features.shape[1]} features")
+
+    route_indices = _get_top_routes_per_grade(grades, repeats, n_per_grade=4)
+    print(f"Showing top {4} routes per grade: {len(route_indices)} total")
 
     print("Computing latent space ranges...")
     bottleneck_dim = model.bottleneck_dim
@@ -329,7 +369,10 @@ def main() -> None:
     renderer = GridRenderer(mapper)
 
     print("Building Gradio interface...")
-    app = create_app(model, grades, features, latent_ranges, mapper, renderer, device, bottleneck_dim)
+    app = create_app(
+        model, grades, features, latent_ranges, mapper, renderer, device,
+        bottleneck_dim, route_indices, repeats,
+    )
 
     print(f"Launching app on http://localhost:{args.port}")
     app.launch(server_port=args.port)

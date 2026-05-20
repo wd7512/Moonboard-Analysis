@@ -11,6 +11,7 @@ from moonboard_analysis.models.autoencoder import Autoencoder
 from moonboard_analysis.scripts.launch_autoencoder_viz import (
     _build_route_labels,
     _compute_latent_ranges,
+    _get_top_routes_per_grade,
     _load_data,
     _load_model,
     create_app,
@@ -36,7 +37,7 @@ def model(device: torch.device) -> Autoencoder:
 
 
 @pytest.fixture
-def data() -> tuple[np.ndarray, np.ndarray]:
+def data() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Load training data."""
     if not Path(DATA_PATH).exists():
         pytest.skip(f"Data file not found at {DATA_PATH}")
@@ -44,9 +45,9 @@ def data() -> tuple[np.ndarray, np.ndarray]:
 
 
 @pytest.fixture
-def latent_ranges(model: Autoencoder, data: tuple[np.ndarray, np.ndarray], device: torch.device) -> list[tuple[float, float]]:
+def latent_ranges(model: Autoencoder, data: tuple[np.ndarray, np.ndarray, np.ndarray], device: torch.device) -> list[tuple[float, float]]:
     """Compute latent space ranges."""
-    grades, features = data
+    grades, features, _ = data
     return _compute_latent_ranges(model, features, device, model.bottleneck_dim)
 
 
@@ -68,24 +69,27 @@ class TestAppCreation:
     def test_app_creates(
         self,
         model: Autoencoder,
-        data: tuple[np.ndarray, np.ndarray],
+        data: tuple[np.ndarray, np.ndarray, np.ndarray],
         latent_ranges: list[tuple[float, float]],
         mapper: GridMapper,
         renderer: GridRenderer,
         device: torch.device,
     ) -> None:
         """Verify app creates without errors."""
-        grades, features = data
-        app = create_app(model, grades, features, latent_ranges, mapper, renderer, device)
+        grades, features, repeats = data
+        route_indices = _get_top_routes_per_grade(grades, repeats)
+        app = create_app(model, grades, features, latent_ranges, mapper, renderer, device, model.bottleneck_dim, route_indices, repeats)
         assert app is not None
 
-    def test_route_labels_format(self, data: tuple[np.ndarray, np.ndarray]) -> None:
+    def test_route_labels_format(self, data: tuple[np.ndarray, np.ndarray, np.ndarray]) -> None:
         """Verify route labels have expected format."""
-        grades, _ = data
-        labels = _build_route_labels(grades)
-        assert len(labels) == len(grades)
-        assert "Route #0" in labels[0]
+        grades, _, repeats = data
+        route_indices = _get_top_routes_per_grade(grades, repeats)
+        labels = _build_route_labels(grades, repeats, route_indices)
+        assert len(labels) == len(route_indices)
+        assert "Route #" in labels[0]
         assert "Grade:" in labels[0]
+        assert "repeats" in labels[0]
 
 
 class TestTypeCoercion:
@@ -98,13 +102,13 @@ class TestTypeCoercion:
     def test_string_latent_values_coerced(
         self,
         model: Autoencoder,
-        data: tuple[np.ndarray, np.ndarray],
+        data: tuple[np.ndarray, np.ndarray, np.ndarray],
         mapper: GridMapper,
         renderer: GridRenderer,
         device: torch.device,
     ) -> None:
         """Verify string latent values are correctly coerced to floats."""
-        grades, features = data
+        grades, features, _ = data
         latent_ranges = _compute_latent_ranges(model, features, device, model.bottleneck_dim)
 
         # Simulate Gradio 5 passing strings
@@ -123,13 +127,13 @@ class TestTypeCoercion:
     def test_string_threshold_coerced(
         self,
         model: Autoencoder,
-        data: tuple[np.ndarray, np.ndarray],
+        data: tuple[np.ndarray, np.ndarray, np.ndarray],
         mapper: GridMapper,
         renderer: GridRenderer,
         device: torch.device,
     ) -> None:
         """Verify string threshold is correctly coerced to float."""
-        grades, features = data
+        grades, features, _ = data
         latent_ranges = _compute_latent_ranges(model, features, device, model.bottleneck_dim)
 
         string_threshold = "0.5"
@@ -152,13 +156,13 @@ class TestTypeCoercion:
     def test_mixed_string_and_float_inputs(
         self,
         model: Autoencoder,
-        data: tuple[np.ndarray, np.ndarray],
+        data: tuple[np.ndarray, np.ndarray, np.ndarray],
         mapper: GridMapper,
         renderer: GridRenderer,
         device: torch.device,
     ) -> None:
         """Verify mixed string/float inputs work correctly."""
-        grades, features = data
+        grades, features, _ = data
         latent_ranges = _compute_latent_ranges(model, features, device, model.bottleneck_dim)
 
         # Mix of strings and floats (simulating Gradio 5 behavior)
@@ -176,11 +180,11 @@ class TestTypeCoercion:
     def test_returned_values_are_python_floats(
         self,
         model: Autoencoder,
-        data: tuple[np.ndarray, np.ndarray],
+        data: tuple[np.ndarray, np.ndarray, np.ndarray],
         device: torch.device,
     ) -> None:
         """Verify returned slider values are plain Python floats."""
-        grades, features = data
+        grades, features, _ = data
         latent_ranges = _compute_latent_ranges(model, features, device, model.bottleneck_dim)
 
         # Encode a route and check return types
