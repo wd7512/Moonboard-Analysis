@@ -187,7 +187,7 @@ def create_app(
                     minimum=0.1,
                     maximum=0.9,
                     value=0.5,
-                    step=0.05,
+                    step=0.001,
                     label="Binarization Threshold",
                 )
 
@@ -199,7 +199,7 @@ def create_app(
                         minimum=low,
                         maximum=high,
                         value=0.0,
-                        step=0.01,
+                        step=0.001,
                         label=f"Dimension {dim}",
                     )
                     sliders.append(slider)
@@ -221,7 +221,7 @@ def create_app(
             tensor = torch.tensor(feature, dtype=torch.float32).to(device)
             with torch.no_grad():
                 encoded = model.encode(tensor).cpu().numpy()[0]
-            return [float(v) for v in encoded]
+            return [round(float(v), 3) for v in encoded]
 
         def update_visualization(
             route_label: str,
@@ -251,7 +251,7 @@ def create_app(
                 threshold=threshold,
             )
 
-            return fig, f"{mse:.6f}"
+            return fig, f"{mse:.3f}"
 
         def reset_sliders(route_label: str) -> list:
             values = update_from_route(route_label)
@@ -261,7 +261,7 @@ def create_app(
             values = []
             for dim in range(bottleneck_dim):
                 low, high = slider_ranges[dim]
-                values.append(float(np.random.uniform(low, high)))
+                values.append(round(float(np.random.uniform(low, high)), 3))
             return values
 
         for slider in sliders:
