@@ -1,0 +1,339 @@
+"""Gradio app for autoencoder latent space exploration.
+
+Usage:
+    uv run python scripts/launch_autoencoder_viz.py
+
+Loads a trained autoencoder and training data, then launches an interactive
+web interface for manipulating latent vectors and visualizing reconstructions
+on a Moonboard grid.
+"""
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+
+import gradio as gr
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+
+from moonboard_analysis.config import AutoencoderConfig
+from moonboard_analysis.data.grid_mapping import GridMapper
+from moonboard_analysis.models.autoencoder import Autoencoder
+from moonboard_analysis.utils.device import get_device
+from moonboard_analysis.visualization.renderer import GridRenderer
+
+matplotlib.use("Agg")
+
+GRADE_MAP = {
+    0: "6B+",
+    1: "6C",
+    2: "6C+",
+    3: "7A",
+    4: "7A+",
+    5: "7B",
+    6: "7B+",
+    7: "7C",
+    8: "7C+",
+    9: "8A",
+    10: "8A+",
+    11: "8B",
+    12: "8B+",
+}
+
+
+def _decode_grade(grade_idx: float) -> str:
+    """Convert grade index to grade string."""
+    idx = int(round(grade_idx))
+    return GRADE_MAP.get(idx, f"Unknown ({idx})")
+
+
+def _load_model(model_path: str, device: torch.device) -> Autoencoder:
+    """Load trained autoencoder from checkpoint."""
+    checkpoint = torch.load(model_path, map_location=device, weights_only=True)
+    config = checkpoint.get("config", {})
+    input_dim = config.get("input_dim", AutoencoderConfig.input_dim)
+    bottleneck_dim = config.get("bottleneck_dim", AutoencoderConfig.bottleneck_dim)
+
+    model = Autoencoder(input_dim=input_dim, bottleneck_dim=bottleneck_dim)
+    model.load_state_dict(checkpoint["model_state_dict"])
+    model.to(device)
+    model.eval()
+    return model
+
+
+def _load_data(data_path: str) -> tuple[np.ndarray, np.ndarray]:
+    """Load training data and return grades and features."""
+    data = np.load(data_path, allow_pickle=True)
+    grades = np.array([row[0] for row in data], dtype=float)
+    features = np.stack([row[1] for row in data]).astype(np.float32)
+    return grades, features
+
+
+def _compute_latent_ranges(
+    model: Autoencoder,
+    features: np.ndarray,
+    device: torch.device,
+    bottleneck_dim: int,
+) -> list[tuple[float, float]]:
+    """Compute p5/p95 ranges for each latent dimension."""
+    tensor = torch.tensor(features, dtype=torch.float32).to(device)
+    with torch.no_grad():
+        encoded = model.encode(tensor).cpu().numpy()
+
+    ranges = []
+    for dim in range(bottleneck_dim):
+        p5 = float(np.percentile(encoded[:, dim], 5))
+        p95 = float(np.percentile(encoded[:, dim], 95))
+        margin = (p95 - p5) * 0.1
+        ranges.append((p5 - margin, p95 + margin))
+    return ranges
+
+
+def _build_route_labels(grades: np.ndarray) -> list[str]:
+    """Build dropdown labels for all routes."""
+    labels = []
+    for i, grade_idx in enumerate(grades):
+        grade_str = _decode_grade(grade_idx)
+        labels.append(f"Route #{i} — Grade: {grade_str}")
+    return labels
+
+
+def create_app(
+    model: Autoencoder,
+    grades: np.ndarray,
+    features: np.ndarray,
+    latent_ranges: list[tuple[float, float]],
+    mapper: GridMapper,
+    renderer: GridRenderer,
+    device: torch.device,
+    bottleneck_dim: int = 8,
+) -> gr.Blocks:
+    """Create the Gradio Blocks interface.
+
+    Args:
+        model: Trained autoencoder.
+        grades: Grade indices for all routes.
+        features: 164-dim feature vectors for all routes.
+        latent_ranges: (min, max) for each latent dimension.
+        mapper: GridMapper for coordinate conversion.
+        renderer: GridRenderer for visualization.
+        device: Torch device for model inference.
+        bottleneck_dim: Dimension of the latent space.
+
+    Returns:
+        Gradio Blocks app.
+    """
+    route_labels = _build_route_labels(grades)
+
+    with gr.Blocks(title="Moonboard Autoencoder Explorer") as app:
+        gr.Markdown("# Moonboard Autoencoder — Latent Space Explorer")
+        gr.Markdown(
+            "Select a route, then manipulate its 8-dimensional latent "
+            "representation to see how the reconstruction changes."
+        )
+
+        with gr.Row():
+            with gr.Column(scale=1):
+                route_dropdown = gr.Dropdown(
+                    choices=route_labels,
+                    value=route_labels[0],
+                    label="Route",
+                )
+                threshold_slider = gr.Slider(
+                    minimum=0.1,
+                    maximum=0.9,
+                    value=0.5,
+                    step=0.05,
+                    label="Binarization Threshold",
+                )
+
+                gr.Markdown("### Latent Dimensions")
+                sliders: list = []
+                for dim in range(bottleneck_dim):
+                    low, high = latent_ranges[dim]
+                    slider = gr.Slider(
+                        minimum=low,
+                        maximum=high,
+                        value=0.0,
+                        step=0.01,
+                        label=f"Dimension {dim}",
+                    )
+                    sliders.append(slider)
+
+                with gr.Row():
+                    reset_btn = gr.Button("Reset to Encoded")
+                    random_btn = gr.Button("Randomize")
+
+            with gr.Column(scale=2):
+                mse_text = gr.Textbox(label="Reconstruction MSE", interactive=False)
+                comparison_plot = gr.Plot(label="Original vs Reconstructed")
+                prev_fig_state = gr.State(None)
+
+        def _get_route_index(label: str) -> int:
+            return int(label.split("#")[1].split(" ")[0])
+
+        def update_from_route(route_label: str) -> list:
+            idx = _get_route_index(route_label)
+            feature = features[idx : idx + 1]
+            tensor = torch.tensor(feature, dtype=torch.float32).to(device)
+            with torch.no_grad():
+                encoded = model.encode(tensor).cpu().numpy()[0]
+            return [float(v) for v in encoded]
+
+        def update_visualization(
+            route_label: str,
+            threshold: float,
+            *latent_values: float,
+            prev_fig: matplotlib.figure.Figure | None = None,
+        ) -> tuple:
+            if prev_fig is not None:
+                plt.close(prev_fig)
+
+            idx = _get_route_index(route_label)
+            original_vec = features[idx]
+            threshold = float(threshold)
+
+            latent = np.array([float(v) for v in latent_values], dtype=np.float32).reshape(1, -1)
+            latent_tensor = torch.tensor(latent, dtype=torch.float32).to(device)
+            with torch.no_grad():
+                reconstructed = model.decode(latent_tensor).cpu().numpy()[0]
+
+            mse = float(np.mean((original_vec - reconstructed) ** 2))
+
+            original_grid = mapper.vector_to_grid(original_vec)
+            recon_grid = mapper.vector_to_grid(reconstructed)
+
+            fig = renderer.render_comparison(
+                original_grid,
+                recon_grid,
+                threshold=threshold,
+            )
+
+            return fig, f"{mse:.6f}", fig
+
+        def reset_sliders(route_label: str) -> list:
+            values = update_from_route(route_label)
+            return values
+
+        def randomize_sliders() -> list:
+            values = []
+            for dim in range(bottleneck_dim):
+                low, high = latent_ranges[dim]
+                values.append(float(np.random.uniform(low, high)))
+            return values
+
+        for slider in sliders:
+            deps = [route_dropdown, threshold_slider] + sliders
+            slider.change(
+                fn=update_visualization,
+                inputs=deps + [prev_fig_state],
+                outputs=[comparison_plot, mse_text, prev_fig_state],
+            )
+
+        route_dropdown.change(
+            fn=reset_sliders,
+            inputs=[route_dropdown],
+            outputs=sliders,
+        ).then(
+            fn=update_visualization,
+            inputs=[route_dropdown, threshold_slider] + sliders + [prev_fig_state],
+            outputs=[comparison_plot, mse_text, prev_fig_state],
+        )
+
+        threshold_slider.change(
+            fn=update_visualization,
+            inputs=[route_dropdown, threshold_slider] + sliders + [prev_fig_state],
+            outputs=[comparison_plot, mse_text, prev_fig_state],
+        )
+
+        reset_btn.click(
+            fn=reset_sliders,
+            inputs=[route_dropdown],
+            outputs=sliders,
+        ).then(
+            fn=update_visualization,
+            inputs=[route_dropdown, threshold_slider] + sliders + [prev_fig_state],
+            outputs=[comparison_plot, mse_text, prev_fig_state],
+        )
+
+        random_btn.click(
+            fn=randomize_sliders,
+            inputs=[],
+            outputs=sliders,
+        ).then(
+            fn=update_visualization,
+            inputs=[route_dropdown, threshold_slider] + sliders + [prev_fig_state],
+            outputs=[comparison_plot, mse_text, prev_fig_state],
+        )
+
+        app.load(
+            fn=reset_sliders,
+            inputs=[route_dropdown],
+            outputs=sliders,
+        ).then(
+            fn=update_visualization,
+            inputs=[route_dropdown, threshold_slider] + sliders + [prev_fig_state],
+            outputs=[comparison_plot, mse_text, prev_fig_state],
+        )
+
+    return app
+
+
+def main() -> None:
+    """Parse arguments and launch the Gradio app."""
+    parser = argparse.ArgumentParser(description="Autoencoder latent space visualizer")
+    parser.add_argument(
+        "--model-path",
+        type=str,
+        default="Autoencoder_Moonboard.pth",
+        help="Path to trained model checkpoint",
+    )
+    parser.add_argument(
+        "--data-path",
+        type=str,
+        default="archive/Legacy/2016TrainingData164.npy",
+        help="Path to training data .npy file",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=7860,
+        help="Port to serve the app on",
+    )
+    args = parser.parse_args()
+
+    if not Path(args.model_path).exists():
+        print(f"Error: Model not found at '{args.model_path}'")
+        return
+
+    if not Path(args.data_path).exists():
+        print(f"Error: Data not found at '{args.data_path}'")
+        return
+
+    device = get_device()
+    print(f"Loading model from {args.model_path} on {device}")
+    model = _load_model(args.model_path, device)
+
+    print(f"Loading data from {args.data_path}")
+    grades, features = _load_data(args.data_path)
+    print(f"Loaded {len(features)} routes with {features.shape[1]} features")
+
+    print("Computing latent space ranges...")
+    bottleneck_dim = model.bottleneck_dim
+    latent_ranges = _compute_latent_ranges(model, features, device, bottleneck_dim)
+
+    mapper = GridMapper()
+    renderer = GridRenderer(mapper)
+
+    print("Building Gradio interface...")
+    app = create_app(model, grades, features, latent_ranges, mapper, renderer, device, bottleneck_dim)
+
+    print(f"Launching app on http://localhost:{args.port}")
+    app.launch(server_port=args.port)
+
+
+if __name__ == "__main__":
+    main()

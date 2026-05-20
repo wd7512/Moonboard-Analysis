@@ -10,6 +10,7 @@ from sklearn.model_selection import train_test_split
 from moonboard_analysis.config import AutoencoderConfig
 from moonboard_analysis.training.metrics import evaluate_reconstruction
 from moonboard_analysis.training.trainer import train_autoencoder
+from moonboard_analysis.utils.device import get_device
 from moonboard_analysis.utils.reproducibility import set_seeds
 
 
@@ -64,7 +65,7 @@ def main() -> None:
         model_save_path=str(output_dir / "Autoencoder_Moonboard.pth"),
     )
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = get_device()
     print(f"Training on device: {device}")
 
     mlflow.set_experiment("Autoencoder Training")

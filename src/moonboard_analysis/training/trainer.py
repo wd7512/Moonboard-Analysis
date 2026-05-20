@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 from moonboard_analysis.config import AutoencoderConfig
 from moonboard_analysis.data.dataset import AutoencoderDataset
 from moonboard_analysis.models.autoencoder import Autoencoder
+from moonboard_analysis.utils.device import get_device
 
 
 def train_autoencoder(
@@ -15,7 +16,7 @@ def train_autoencoder(
     device: torch.device | None = None,
 ) -> tuple[Autoencoder, torch.device]:
     if device is None:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        device = get_device()
 
     train_dataset = AutoencoderDataset(train_features)
     test_dataset = AutoencoderDataset(test_features)

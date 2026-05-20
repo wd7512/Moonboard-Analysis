@@ -12,6 +12,7 @@ from moonboard_analysis.config import AutoencoderConfig
 from moonboard_analysis.models.autoencoder import Autoencoder
 from moonboard_analysis.training.metrics import evaluate_reconstruction
 from moonboard_analysis.training.trainer import train_autoencoder
+from moonboard_analysis.utils.device import get_device
 from moonboard_analysis.utils.reproducibility import set_seeds
 
 
@@ -48,7 +49,7 @@ def train_and_evaluate_autoencoder(
         learning_rate=learning_rate,
         seed=seed,
     )
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = get_device()
     train_tensor = torch.tensor(train_features, dtype=torch.float32)
     test_tensor = torch.tensor(test_features, dtype=torch.float32)
 

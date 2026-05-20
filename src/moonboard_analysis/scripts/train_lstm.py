@@ -18,6 +18,7 @@ from moonboard_analysis.data.preprocessing import (
 )
 from moonboard_analysis.models.lstm import ClimbingGradePredictor
 from moonboard_analysis.training.trainer import evaluate_lstm, train_lstm_epoch
+from moonboard_analysis.utils.device import get_device
 from moonboard_analysis.utils.reproducibility import set_seeds
 
 GRADE_ORDER = ["6A", "6A+", "6B+", "6C", "6C+", "7A", "7A+", "7B", "7B+", "7C", "7C+", "8A"]
@@ -116,7 +117,7 @@ def main() -> None:
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = get_device()
     print(f"Training on device: {device}")
 
     model = ClimbingGradePredictor(
