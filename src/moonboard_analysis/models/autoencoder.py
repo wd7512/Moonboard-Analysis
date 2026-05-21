@@ -12,25 +12,32 @@ class Autoencoder(nn.Module):
     to [-1, 1] range, enabling fixed slider ranges in the visualization app.
     """
 
-    def __init__(self, input_dim: int, bottleneck_dim: int, bounded: bool = False):
+    def __init__(
+        self,
+        input_dim: int,
+        bottleneck_dim: int,
+        hidden_dim: int = 64,
+        bounded: bool = False,
+    ):
         super().__init__()
         self.input_dim = input_dim
         self.bottleneck_dim = bottleneck_dim
+        self.hidden_dim = hidden_dim
         self.bounded = bounded
 
         self.encoder = nn.Sequential(
-            nn.Linear(input_dim, 64),
+            nn.Linear(input_dim, hidden_dim),
             nn.ReLU(),
-            nn.BatchNorm1d(64),
-            nn.Linear(64, bottleneck_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.Linear(hidden_dim, bottleneck_dim),
             nn.Tanh() if bounded else nn.ReLU(),
         )
 
         self.decoder = nn.Sequential(
-            nn.Linear(bottleneck_dim, 64),
+            nn.Linear(bottleneck_dim, hidden_dim),
             nn.ReLU(),
-            nn.BatchNorm1d(64),
-            nn.Linear(64, input_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.Linear(hidden_dim, input_dim),
             nn.Sigmoid(),
         )
 

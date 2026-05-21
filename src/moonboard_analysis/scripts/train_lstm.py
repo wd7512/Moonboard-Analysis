@@ -9,7 +9,7 @@ import torch.optim as optim
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 
-from moonboard_analysis.config import LSTMConfig
+from moonboard_analysis.config import GRADE_ORDER, LSTMConfig
 from moonboard_analysis.data.dataset import LSTMSequenceDataset
 from moonboard_analysis.data.loader import load_lstm_data
 from moonboard_analysis.data.preprocessing import (
@@ -20,8 +20,6 @@ from moonboard_analysis.models.lstm import ClimbingGradePredictor
 from moonboard_analysis.training.trainer import evaluate_lstm, train_lstm_epoch
 from moonboard_analysis.utils.device import get_device
 from moonboard_analysis.utils.reproducibility import set_seeds
-
-GRADE_ORDER = ["6A", "6A+", "6B+", "6C", "6C+", "7A", "7A+", "7B", "7B+", "7C", "7C+", "8A"]
 
 
 def parse_args() -> argparse.Namespace:

@@ -25,7 +25,9 @@ def train_autoencoder(
     )
     test_loader = DataLoader(test_dataset, batch_size=config.batch_size)
 
-    model = Autoencoder(config.input_dim, config.bottleneck_dim, bounded=config.bounded).to(device)
+    model = Autoencoder(
+        config.input_dim, config.bottleneck_dim, config.hidden_dim, bounded=config.bounded
+    ).to(device)
     criterion = nn.MSELoss()
     optimizer = optim.Adam(
         model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay
@@ -35,6 +37,7 @@ def train_autoencoder(
     )
 
     best_test_loss = float("inf")
+    best_model_state = None
     for epoch in range(config.epochs):
         model.train()
         train_loss = 0.0
@@ -59,6 +62,10 @@ def train_autoencoder(
 
         if test_loss < best_test_loss:
             best_test_loss = test_loss
+            best_model_state = {k: v.clone() for k, v in model.state_dict().items()}
+
+    if best_model_state is not None:
+        model.load_state_dict(best_model_state)
 
     return model, device
 

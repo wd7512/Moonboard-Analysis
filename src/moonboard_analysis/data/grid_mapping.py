@@ -87,11 +87,11 @@ class GridMapper:
         "K1",
     ]
 
-    _insert_indices: list[int] | None = None
+    _insert_indices: list[int] = []
 
     def __init__(self) -> None:
-        """Compute _insert_indices from NULL_HOLDS on instantiation."""
-        if GridMapper._insert_indices is None:
+        """Compute _insert_indices from NULL_HOLDS on first instantiation."""
+        if not GridMapper._insert_indices:
             GridMapper._insert_indices = self._compute_insert_indices()
 
     @staticmethod

@@ -159,9 +159,9 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-# Model weights
-*.pth
-*.pt
+# Model weights (pre-trained models are distributed with the repo)
+# *.pth
+# *.pt
 
 # Generated figures
 *.png

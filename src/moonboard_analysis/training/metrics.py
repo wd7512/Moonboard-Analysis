@@ -73,6 +73,5 @@ def _accuracy_within_diagonal(conf_matrix: np.ndarray, width: int) -> float:
     total_correct = 0
     for i in range(n):
         for j in range(max(0, i - width + 1), min(n, i + width)):
-            if abs(i - j) < width:
-                total_correct += conf_matrix[i, j]
+            total_correct += conf_matrix[i, j]
     return total_correct / conf_matrix.sum()

@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+GRADE_ORDER = ["6A", "6A+", "6B+", "6C", "6C+", "7A", "7A+", "7B", "7B+", "7C", "7C+", "8A"]
+
 
 @dataclass
 class AutoencoderConfig:
