@@ -339,9 +339,32 @@ def main() -> None:
 
             fold_metrics[dim] = {"pca": fold_pca, "autoenc": fold_autoenc}
 
+            # ── Compute normalisation (mean per-feature variance across all folds) ─
+            # Test-fold variance acts as the input variance proxy for rel_mse.
+            fold_test_vars: list[float] = []
+            for _, test_idx in kf.split(features):
+                fold_test_vars.append(float(np.var(features[test_idx], axis=0).mean()))
+            input_variance = float(np.mean(fold_test_vars))
+
             # ── Aggregate across folds ───────────────────────────────────────
             pca_agg = {k: agg([f[k] for f in fold_pca])   for k in fold_pca[0]}
             ae_agg  = {k: agg([f[k] for f in fold_autoenc]) for k in fold_autoenc[0]}
+
+            # recon_loss (alias for mse for readability) ─────────────────────
+            pca_agg["recon_loss"] = pca_agg["mse"]
+            ae_agg["recon_loss"]  = ae_agg["mse"]
+
+            # rel_mse = mse / mean_per_feature_input_variance ───────────────
+            pca_agg["rel_mse"] = {"mean": pca_agg["mse"]["mean"] / input_variance,
+                                  "std":   0.0,
+                                  "n":     1,
+                                  "values": [pca_agg["mse"]["mean"] / input_variance]}
+            ae_agg["rel_mse"]  = {"mean": ae_agg["mse"]["mean"] /  input_variance,
+                                  "std":   0.0,
+                                  "n":     1,
+                                  "values": [ae_agg["mse"]["mean"] /  input_variance]}
+
+            agg_metrics[dim] = {"pca": pca_agg, "autoenc": ae_agg}
 
             # Log CV summary metrics (mean only) to MLflow
             for k, v in pca_agg.items():
@@ -411,7 +434,7 @@ def main() -> None:
                 "n_samples":     len(features),
                 "n_features":    features.shape[1],
                 "mode":          "cv_sweep",
-                "metrics":       ["binary_accuracy", "exact_match", "mse"],
+                "metrics":       ["binary_accuracy", "exact_match", "mse", "recon_loss", "rel_mse"],
             },
         }
         for dim in args.dims:
