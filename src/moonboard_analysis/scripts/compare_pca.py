@@ -144,6 +144,22 @@ def agg(series: list[float]) -> dict[str, Any]:
     }
 
 
+def _clean(d: dict[str, Any]) -> dict[str, Any]:
+    """Recursively convert numpy scalars to plain Python types for JSON."""
+    out: dict[str, Any] = {}
+    for k2, v2 in d.items():
+        if isinstance(v2, dict):
+            out[k2] = {
+                k3: float(v3)
+                if isinstance(v3, (np.floating, np.integer))
+                else v3
+                for k3, v3 in v2.items()
+            }
+        else:
+            out[k2] = v2
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Plotting
 # ---------------------------------------------------------------------------
@@ -203,8 +219,10 @@ def make_cv_plot(
     titles      = ["Binary Accuracy  (thresh 0.5)", "Exact Match Rate"]
 
     fig, axes = plt.subplots(1, len(metric_keys), figsize=(12, 5), sharex=True)
-    fig.suptitle("PCA vs Autoencoder: 5-Fold CV Results (mean ± 1 std)",
-                 fontsize=13)
+    fig.suptitle(
+        f"PCA vs Autoencoder: {n_folds}-Fold CV Results (mean ± 1 std)",
+        fontsize=13,
+    )
 
     for ax, key, title in zip(axes, metric_keys, titles):
         pca_means  = [r["pca"][key]["mean"]  for r in cv_results]
@@ -273,6 +291,8 @@ def main() -> None:
 
     # fold_metrics[dim] = {"pca": [fold_result, ...], "autoenc": [fold_result, ...]}
     fold_metrics: dict[int, dict[str, list[dict[str, float]]]] = {}
+    # agg_metrics[dim] = {"pca": {metric: {mean, std, n, values}}, "autoenc": ...}
+    agg_metrics:  dict[int, dict[str, dict[str, Any]]]          = {}
 
     with mlflow.start_run() as run:
         mlflow.log_params(
@@ -395,24 +415,11 @@ def main() -> None:
             },
         }
         for dim in args.dims:
-            rt   = fold_metrics[dim]
-            pca_agg = {k: agg([f[k] for f in rt["pca"]])    for k in rt["pca"][0]}
-            ae_agg  = {k: agg([f[k] for f in rt["autoenc"]]) for k in rt["autoenc"][0]}
-            # Convert numpy and non-float values to plain Python types for JSON
-            def _clean(d):
-                out = {}
-                for k2, v2 in d.items():
-                    if isinstance(v2, dict):
-                        out[k2] = {k3: float(v3) if isinstance(v3, (np.floating,)) else v3
-                                   for k3, v3 in v2.items()}
-                    else:
-                        out[k2] = v2
-                return out
-            json_out["results"].append({
-                "dim":    dim,
-                "pca":    _clean(pca_agg),
-                "autoenc": _clean(ae_agg),
-            })
+            pa = agg_metrics[dim]["pca"]
+            aa = agg_metrics[dim]["autoenc"]
+            json_out["results"].append(
+                {"dim": dim, "pca": _clean(pa), "autoenc": _clean(aa)}
+            )
 
         with open(json_path, "w") as f:
             json.dump(json_out, f, indent=2)
