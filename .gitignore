@@ -160,8 +160,8 @@ cython_debug/
 #.idea/
 
 # Model weights (pre-trained models are distributed with the repo)
-# *.pth
-# *.pt
+*.pth
+*.pt
 
 # Generated figures
 *.png
