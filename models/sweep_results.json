@@ -39,7 +39,7 @@
       "mse": 0.011059
     }
   ],
-  "autoencoder": [
+  "autoenc": [
     {
       "binary_accuracy": 0.9635,
       "exact_match": 0.0006,
