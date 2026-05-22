@@ -21,6 +21,31 @@ from moonboard_analysis.utils.reproducibility import set_seeds
 
 
 # ---------------------------------------------------------------------------
+# Loading helpers
+# ---------------------------------------------------------------------------
+
+def load_feature_matrix(data_path: str) -> np.ndarray:
+    """Return float32 array of shape (n_samples, n_features).
+
+    The legacy .npy files store rows as ``[grade, vector]`` pairs with dtype
+    *object*.  We detect that layout and stack just the vectors.
+    """
+    raw = np.load(data_path, allow_pickle=True)
+
+    # Case A – normal numeric array, second column onward is the feature matrix
+    if raw.dtype != object:
+        return raw[:, 1:].astype(np.float32)
+
+    # Case B – object array where each row is [grade (int), vector (array)]
+    if len(raw.shape) == 2 and raw.shape[1] == 2:
+        n = raw.shape[0]
+        vectors = np.array([raw[i, 1] for i in range(n)], dtype=np.float32)
+        return vectors
+
+    raise ValueError(f"Unexpected data shape/dtype: shape={raw.shape}, dtype={raw.dtype}")
+
+
+# ---------------------------------------------------------------------------
 # Argument parsing
 # ---------------------------------------------------------------------------
 
@@ -55,14 +80,14 @@ def parse_args() -> argparse.Namespace:
 
 def evaluate_pca(
     train_features: np.ndarray,
-    test_features: np.ndarray,
+    test_features:  np.ndarray,
     n_components: int,
 ) -> dict[str, float]:
     pca = PCA(n_components=n_components)
     pca.fit(train_features)
     reconstructed = pca.inverse_transform(pca.transform(test_features))
 
-    test_tensor = torch.tensor(test_features, dtype=torch.float32)
+    test_tensor  = torch.tensor(test_features,  dtype=torch.float32)
     recon_tensor = torch.tensor(reconstructed, dtype=torch.float32)
 
     mse = torch.nn.MSELoss()(recon_tensor, test_tensor).item()
@@ -103,10 +128,10 @@ def train_and_evaluate_autoencoder(
 # ---------------------------------------------------------------------------
 
 def make_plot(
-    dims:         list[int],
-    pca_results:  list[dict[str, float]],
-    ae_results:   list[dict[str, float]],
-    plot_path:    str,
+    dims:        list[int],
+    pca_results: list[dict[str, float]],
+    ae_results:  list[dict[str, float]],
+    plot_path:   str,
 ) -> None:
     pca_bin   = [r["binary_accuracy"] for r in pca_results]
     ae_bin    = [r["binary_accuracy"] for r in ae_results]
@@ -118,7 +143,7 @@ def make_plot(
                  fontsize=13)
 
     for ax, pca_vals, ae_vals, title in [
-        (axes[0], pca_bin,   ae_bin,   "Binary Accuracy (threshold 0.5)"),
+        (axes[0], pca_bin,   ae_bin,   "Binary Accuracy  (thresh 0.5)"),
         (axes[1], pca_exact, ae_exact, "Exact Match Rate"),
     ]:
         ax.plot(dims, pca_vals, "o-", color="#4C72B0", label="PCA",
@@ -140,7 +165,7 @@ def make_plot(
 
     plt.tight_layout()
     Path(plot_path).parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(plot_path, dpi=150)
+    plt.savefig(plot_path, dpi=150, bbox_inches="tight")
     plt.close()
     print(f"\n📊  Plot saved → {plot_path}")
 
@@ -160,8 +185,7 @@ def main() -> None:
         sys.exit(1)
 
     print(f"Loading data from {data_path}")
-    data    = np.load(data_path, allow_pickle=True)
-    features = data[:, 1:].astype(np.float32)
+    features = load_feature_matrix(data_path)
     print(f"Data shape: {features.shape}")
 
     train_features, test_features = train_test_split(
@@ -175,7 +199,7 @@ def main() -> None:
         mlflow.log_params(
             {
                 "data_path":    data_path,
-                "dims":         args.dims,
+                "dims":         str(args.dims),
                 "ae_epochs":    args.epochs,
                 "ae_batch_size": args.batch_size,
                 "ae_lr":        args.learning_rate,
@@ -201,7 +225,7 @@ def main() -> None:
             print(f"  Exact Match:   {pca_res['exact_match']:.4f}")
 
             # ── Autoencoder ─────────────────────────────────────────────────
-            print(f"[Autoencoder] training {args.epochs} epochs…")
+            print(f"[Autoencoder] training {args.epochs} epochs …")
             ae_res = train_and_evaluate_autoencoder(
                 train_features, test_features,
                 dim, args.epochs, args.batch_size, args.learning_rate, args.seed,
@@ -216,7 +240,7 @@ def main() -> None:
 
         # ── Summary table ───────────────────────────────────────────────────
         print("\n\n=== SWEEP RESULTS SUMMARY ===")
-        print(f"{'Dim':>6} | {'PCA BinAcc':>10}  {'AE BinAcc':>10}  "
+        print(f"{'Dim':>6}  {'PCA BinAcc':>10}  {'AE BinAcc':>10}  "
               f"{'PCA ExMatch':>11}  {'AE ExMatch':>11}")
         print("-" * 60)
         for row in all_results:
