@@ -1,0 +1,40 @@
+name: CI
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  # -----------------------------------------------------------------------
+  # Lint — fast, no ML dependencies
+  # -----------------------------------------------------------------------
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync
+      - run: uv run ruff check src tests
+
+  # -----------------------------------------------------------------------
+  # Type-check — no runtime, catches signature mismatches
+  # -----------------------------------------------------------------------
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync
+      - run: uv run mypy src
+
+  # -----------------------------------------------------------------------
+  # Tests — unit tests only, no GPU needed
+  # -----------------------------------------------------------------------
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync
+      - run: uv run pytest -x -q --tb=short

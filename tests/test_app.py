@@ -45,7 +45,11 @@ def data() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
 
 
 @pytest.fixture
-def latent_ranges(model: Autoencoder, data: tuple[np.ndarray, np.ndarray, np.ndarray], device: torch.device) -> list[tuple[float, float]]:
+def latent_ranges(
+    model: Autoencoder,
+    data: tuple[np.ndarray, np.ndarray, np.ndarray],
+    device: torch.device,
+) -> list[tuple[float, float]]:
     """Compute latent space ranges."""
     grades, features, _ = data
     return _compute_latent_ranges(model, features, device, model.bottleneck_dim)
@@ -78,7 +82,10 @@ class TestAppCreation:
         """Verify app creates without errors."""
         grades, features, repeats = data
         route_indices = _get_top_routes_per_grade(grades, repeats)
-        app = create_app(model, grades, features, latent_ranges, mapper, renderer, device, model.bottleneck_dim, route_indices, repeats)
+        app = create_app(
+                 model, grades, features, latent_ranges,
+                 mapper, renderer, device,
+                 model.bottleneck_dim, route_indices, repeats)
         assert app is not None
 
     def test_route_labels_format(self, data: tuple[np.ndarray, np.ndarray, np.ndarray]) -> None:
@@ -109,7 +116,7 @@ class TestTypeCoercion:
     ) -> None:
         """Verify string latent values are correctly coerced to floats."""
         grades, features, _ = data
-        latent_ranges = _compute_latent_ranges(model, features, device, model.bottleneck_dim)
+        _ = _compute_latent_ranges(model, features, device, model.bottleneck_dim)
 
         # Simulate Gradio 5 passing strings
         string_values = ["1.5", "2.0", "0.5", "3.0", "1.0", "2.5", "0.8", "1.2"]
@@ -134,7 +141,7 @@ class TestTypeCoercion:
     ) -> None:
         """Verify string threshold is correctly coerced to float."""
         grades, features, _ = data
-        latent_ranges = _compute_latent_ranges(model, features, device, model.bottleneck_dim)
+        _ = _compute_latent_ranges(model, features, device, model.bottleneck_dim)
 
         string_threshold = "0.5"
         threshold = float(string_threshold)
@@ -163,7 +170,7 @@ class TestTypeCoercion:
     ) -> None:
         """Verify mixed string/float inputs work correctly."""
         grades, features, _ = data
-        latent_ranges = _compute_latent_ranges(model, features, device, model.bottleneck_dim)
+        _ = _compute_latent_ranges(model, features, device, model.bottleneck_dim)
 
         # Mix of strings and floats (simulating Gradio 5 behavior)
         mixed_values = [1.5, "2.0", 0.5, "3.0", 1.0, "2.5", 0.8, "1.2"]
@@ -185,7 +192,7 @@ class TestTypeCoercion:
     ) -> None:
         """Verify returned slider values are plain Python floats."""
         grades, features, _ = data
-        latent_ranges = _compute_latent_ranges(model, features, device, model.bottleneck_dim)
+        _ = _compute_latent_ranges(model, features, device, model.bottleneck_dim)
 
         # Encode a route and check return types
         idx = 0

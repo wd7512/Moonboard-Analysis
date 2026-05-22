@@ -4,22 +4,22 @@ import sys
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")  # headless-friendly
+from typing import Any
+
 import matplotlib.pyplot as plt
 import mlflow
 import numpy as np
 import torch
 from sklearn.decomposition import PCA
-from sklearn.model_selection import train_test_split
-from typing import Any
+from sklearn.model_selection import KFold
 
 from moonboard_analysis.config import AutoencoderConfig
-from moonboard_analysis.models.autoencoder import Autoencoder
 from moonboard_analysis.training.metrics import evaluate_reconstruction
 from moonboard_analysis.training.trainer import train_autoencoder
 from moonboard_analysis.utils.device import get_device
 from moonboard_analysis.utils.reproducibility import set_seeds
-
 
 # ---------------------------------------------------------------------------
 # Loading helpers
@@ -67,9 +67,14 @@ def parse_args() -> argparse.Namespace:
                         help="Learning rate")
     parser.add_argument("--seed", type=int, default=42,
                         help="Random seed")
+    parser.add_argument("--folds", type=int, default=5,
+                        help="Number of cross-validation folds (default: 5)")
     parser.add_argument("--plot-path", type=str,
                         default="models/comparison_sweep.png",
                         help="Output path for the comparison chart")
+    parser.add_argument("--cv-plot-path", type=str,
+                        default="models/comparison_sweep_cv.png",
+                        help="Output path for the cross-validation plot")
     parser.add_argument("--no-plot", action="store_true",
                         help="Skip generating the plot")
     return parser.parse_args()
@@ -125,6 +130,37 @@ def train_and_evaluate_autoencoder(
 
 
 # ---------------------------------------------------------------------------
+# Aggregation helper
+# ---------------------------------------------------------------------------
+
+def agg(series: list[float]) -> dict[str, Any]:
+    """Compute mean, std, n, and raw values from a list of fold scores."""
+    arr = np.array(series)
+    return {
+        "mean":   arr.mean().item(),
+        "std":    arr.std().item(),
+        "n":      len(series),
+        "values": series,
+    }
+
+
+def _clean(d: dict[str, Any]) -> dict[str, Any]:
+    """Recursively convert numpy scalars to plain Python types for JSON."""
+    out: dict[str, Any] = {}
+    for k2, v2 in d.items():
+        if isinstance(v2, dict):
+            out[k2] = {
+                k3: float(v3)
+                if isinstance(v3, (np.floating, np.integer))
+                else v3
+                for k3, v3 in v2.items()
+            }
+        else:
+            out[k2] = v2
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Plotting
 # ---------------------------------------------------------------------------
 
@@ -171,8 +207,67 @@ def make_plot(
     print(f"\n📊  Plot saved → {plot_path}")
 
 
+def make_cv_plot(
+    dims:          list[int],
+    cv_results:    list[dict[str, Any]],
+    cv_plot_path:  str,
+    n_folds:       int,
+) -> None:
+    """Plot CV means with ±1-std shaded bands for binary accuracy and exact match."""
+    # Build per-metric arrays shaped (n_dims, n_folds)
+    metric_keys = ["binary_accuracy", "exact_match"]
+    titles      = ["Binary Accuracy  (thresh 0.5)", "Exact Match Rate"]
+
+    fig, axes = plt.subplots(1, len(metric_keys), figsize=(12, 5), sharex=True)
+    fig.suptitle(
+        f"PCA vs Autoencoder: {n_folds}-Fold CV Results (mean ± 1 std)",
+        fontsize=13,
+    )
+
+    for ax, key, title in zip(axes, metric_keys, titles):
+        pca_means  = [r["pca"][key]["mean"]  for r in cv_results]
+        pca_stds   = [r["pca"][key]["std"]   for r in cv_results]
+        ae_means   = [r["autoenc"][key]["mean"] for r in cv_results]
+        ae_stds   = [r["autoenc"][key]["std"]  for r in cv_results]
+
+        # Plot means
+        ax.plot(dims, pca_means, "o-", color="#4C72B0", label="PCA",
+                linewidth=2, markersize=7)
+        ax.plot(dims, ae_means,  "s-", color="#DD8452", label="Autoencoder",
+                linewidth=2, markersize=7)
+
+        # Shade ±1 std band
+        ax.fill_between(dims,
+                        [m - s for m, s in zip(pca_means, pca_stds)],
+                        [m + s for m, s in zip(pca_means, pca_stds)],
+                        color="#4C72B0", alpha=0.15)
+        ax.fill_between(dims,
+                        [m - s for m, s in zip(ae_means, ae_stds)],
+                        [m + s for m, s in zip(ae_means, ae_stds)],
+                        color="#DD8452", alpha=0.15)
+
+        ax.set_xscale("log", base=2)
+        ax.set_xticks(dims)
+        ax.set_xticklabels([str(d) for d in dims])
+        ax.set_title(title)
+        ax.set_ylim(0.0, 1.05)
+        ax.legend()
+        ax.grid(True, linestyle="--", alpha=0.5)
+
+    axes[0].set_ylabel("Binary Accuracy")
+    axes[1].set_ylabel("Exact Match Rate")
+    for ax in axes:
+        ax.set_xlabel("Bottleneck Dimension (log₂)")
+
+    plt.tight_layout()
+    Path(cv_plot_path).parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(cv_plot_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    print(f"\n📊  CV plot saved → {cv_plot_path}")
+
+
 # ---------------------------------------------------------------------------
-# Main sweep
+# Main sweep with KFold cross-validation
 # ---------------------------------------------------------------------------
 
 def main() -> None:
@@ -189,76 +284,146 @@ def main() -> None:
     features = load_feature_matrix(data_path)
     print(f"Data shape: {features.shape}")
 
-    train_features, test_features = train_test_split(
-        features, test_size=0.2, random_state=args.seed
-    )
-
     mlflow.set_experiment("Autoencoder vs PCA Comparison")
-    all_results: list[dict[str, Any]] = []
+
+    # ── KFold setup ─────────────────────────────────────────────────────────
+    kf = KFold(n_splits=args.folds, shuffle=True, random_state=args.seed)
+
+    # fold_metrics[dim] = {"pca": [fold_result, ...], "autoenc": [fold_result, ...]}
+    fold_metrics: dict[int, dict[str, list[dict[str, float]]]] = {}
+    # agg_metrics[dim] = {"pca": {metric: {mean, std, n, values}}, "autoenc": ...}
+    agg_metrics:  dict[int, dict[str, dict[str, Any]]]          = {}
 
     with mlflow.start_run() as run:
         mlflow.log_params(
             {
-                "data_path":    data_path,
-                "dims":         str(args.dims),
-                "ae_epochs":    args.epochs,
-                "ae_batch_size": args.batch_size,
-                "ae_lr":        args.learning_rate,
-                "seed":         args.seed,
-                "n_samples":    len(features),
-                "n_features":   features.shape[1],
-                "mode":         "sweep",
+                "data_path":        data_path,
+                "dims":             str(args.dims),
+                "ae_epochs":        args.epochs,
+                "ae_batch_size":    args.batch_size,
+                "ae_lr":            args.learning_rate,
+                "seed":             args.seed,
+                "n_samples":        len(features),
+                "n_features":       features.shape[1],
+                "mode":             "cv_sweep",
+                "n_folds":          args.folds,
             }
         )
 
         for dim in args.dims:
             print(f"\n{'='*60}")
-            print(f"  Bottleneck dimension: {dim}")
+            print(f"  Bottleneck dimension: {dim}  ({args.folds} folds)")
             print(f"{'='*60}")
 
-            # ── PCA ──────────────────────────────────────────────────────────
-            print("[PCA]")
-            pca_res = evaluate_pca(train_features, test_features, dim)
-            for k, v in pca_res.items():
-                mlflow.log_metric(f"pca_{k}", v, step=dim)
-            print(f"  MSE:           {pca_res['mse']:.6f}")
-            print(f"  Binary Acc:    {pca_res['binary_accuracy']:.4f}")
-            print(f"  Exact Match:   {pca_res['exact_match']:.4f}")
+            fold_pca:   list[dict[str, float]] = []
+            fold_autoenc: list[dict[str, float]] = []
 
-            # ── Autoencoder ─────────────────────────────────────────────────
-            print(f"[Autoencoder] training {args.epochs} epochs …")
-            ae_res = train_and_evaluate_autoencoder(
-                train_features, test_features,
-                dim, args.epochs, args.batch_size, args.learning_rate, args.seed,
-            )
-            for k, v in ae_res.items():
-                mlflow.log_metric(f"ae_{k}", v, step=dim)
-            print(f"  MSE:           {ae_res['mse']:.6f}")
-            print(f"  Binary Acc:    {ae_res['binary_accuracy']:.4f}")
-            print(f"  Exact Match:   {ae_res['exact_match']:.4f}")
+            for fold_idx, (train_idx, test_idx) in enumerate(kf.split(features)):
+                train_fold = features[train_idx]
+                test_fold  = features[test_idx]
+                print(
+                    f"  Fold {fold_idx + 1}/{args.folds}  "
+                    f"(train={len(train_fold)}, test={len(test_fold)})"
+                )
 
-            all_results.append({"dim": dim, "pca": pca_res, "autoenc": ae_res})
+                # ── PCA for this fold ─────────────────────────────────────────
+                pca_res = evaluate_pca(train_fold, test_fold, dim)
+                fold_pca.append(pca_res)
 
-        # ── Summary table ───────────────────────────────────────────────────
-        print("\n\n=== SWEEP RESULTS SUMMARY ===")
-        print(f"{'Dim':>6}  {'PCA BinAcc':>10}  {'AE BinAcc':>10}  "
-              f"{'PCA ExMatch':>11}  {'AE ExMatch':>11}")
-        print("-" * 60)
-        for row in all_results:
+                # ── Autoencoder for this fold ─────────────────────────────────
+                ae_res = train_and_evaluate_autoencoder(
+                    train_fold, test_fold,
+                    dim, args.epochs, args.batch_size, args.learning_rate, args.seed,
+                )
+                fold_autoenc.append(ae_res)
+
+            fold_metrics[dim] = {"pca": fold_pca, "autoenc": fold_autoenc}
+
+            # ── Aggregate across folds ───────────────────────────────────────
+            pca_agg = {k: agg([f[k] for f in fold_pca])   for k in fold_pca[0]}
+            ae_agg  = {k: agg([f[k] for f in fold_autoenc]) for k in fold_autoenc[0]}
+
+            # Log CV summary metrics (mean only) to MLflow
+            for k, v in pca_agg.items():
+                mlflow.log_metric(f"pca_cv_{k}_mean", v["mean"], step=dim)
+            for k, v in ae_agg.items():
+                mlflow.log_metric(f"ae_cv_{k}_mean",  v["mean"], step=dim)
+
+            print(f"\n  CV summary (dim={dim}):")
+            print(f"  {'PCA BinAcc':>12}: "
+                  f"{pca_agg['binary_accuracy']['mean']:.4f}"
+                  f" ± {pca_agg['binary_accuracy']['std']:.4f}")
+            print(f"  {'AE  BinAcc':>12}: "
+                  f"{ae_agg['binary_accuracy']['mean']:.4f}"
+                  f" ± {ae_agg['binary_accuracy']['std']:.4f}")
+            print(f"  {'PCA ExMatch':>12}: "
+                  f"{pca_agg['exact_match']['mean']:.4f}"
+                  f" ± {pca_agg['exact_match']['std']:.4f}")
+            print(f"  {'AE  ExMatch':>12}: "
+                  f"{ae_agg['exact_match']['mean']:.4f}"
+                  f" ± {ae_agg['exact_match']['std']:.4f}")
+
+        # ── Cross-validation summary table ───────────────────────────────────
+        print("\n\n=== CROSS-VALIDATION RESULTS (mean ± std) ===")
+        print(f"{'Dim':>6}  "
+              f"{'PCA BinAcc':>15}  {'AE BinAcc':>15}  "
+              f"{'PCA ExMatch':>15}  {'AE ExMatch':>15}")
+        print("-" * 78)
+
+        all_cv_results: list[dict[str, Any]] = []
+        for dim in args.dims:
+            fm = fold_metrics[dim]
+            pca_agg = {k: agg([f[k] for f in fm["pca"]])   for k in fm["pca"][0]}
+            ae_agg  = {k: agg([f[k] for f in fm["autoenc"]]) for k in fm["autoenc"][0]}
+            all_cv_results.append({"dim": dim, "pca": pca_agg, "autoenc": ae_agg})
+
             print(
-                f"{row['dim']:>6}  "
-                f"{row['pca']['binary_accuracy']:>10.4f}  "
-                f"{row['autoenc']['binary_accuracy']:>10.4f}  "
-                f"{row['pca']['exact_match']:>11.4f}  "
-                f"{row['autoenc']['exact_match']:>11.4f}"
+                f"{dim:>6}  "
+                f"{pca_agg['binary_accuracy']['mean']:>8.4f}"
+                f"±{pca_agg['binary_accuracy']['std']:<5.4f}  "
+                f"{ae_agg['binary_accuracy']['mean']:>8.4f}"
+                f"±{ae_agg['binary_accuracy']['std']:<5.4f}  "
+                f"{pca_agg['exact_match']['mean']:>8.4f}"
+                f"±{pca_agg['exact_match']['std']:<5.4f}  "
+                f"{ae_agg['exact_match']['mean']:>8.4f}"
+                f"±{ae_agg['exact_match']['std']:<5.4f}"
             )
 
-        # ── Plot ────────────────────────────────────────────────────────────
+        # ── CV plot ──────────────────────────────────────────────────────────
         if not args.no_plot:
-            dims  = [r["dim"]     for r in all_results]
-            pca_r = [r["pca"]     for r in all_results]
-            ae_r  = [r["autoenc"] for r in all_results]
-            make_plot(dims, pca_r, ae_r, args.plot_path)
+            make_cv_plot(args.dims, all_cv_results, args.cv_plot_path, args.folds)
+
+        # ── Save CV results JSON ─────────────────────────────────────────────
+        json_path = "models/sweep_cv_results.json"
+        Path(json_path).parent.mkdir(parents=True, exist_ok=True)
+        # Make JSON-serialisable: convert Any dicts losing Non-float values
+        json_out = {
+            "dims": args.dims,
+            "results": [],
+            "meta": {
+                "script":        "compare_pca.py",
+                "data_path":     data_path,
+                "n_folds":       args.folds,
+                "ae_epochs":     args.epochs,
+                "ae_batch_size": args.batch_size,
+                "ae_learning_rate": args.learning_rate,
+                "seed":          args.seed,
+                "n_samples":     len(features),
+                "n_features":    features.shape[1],
+                "mode":          "cv_sweep",
+                "metrics":       ["binary_accuracy", "exact_match", "mse"],
+            },
+        }
+        for dim in args.dims:
+            pa = agg_metrics[dim]["pca"]
+            aa = agg_metrics[dim]["autoenc"]
+            json_out["results"].append(
+                {"dim": dim, "pca": _clean(pa), "autoenc": _clean(aa)}
+            )
+
+        with open(json_path, "w") as f:
+            json.dump(json_out, f, indent=2)
+        print(f"\n💾  CV results saved → {json_path}")
 
     print(f"\nRun ID: {run.info.run_id}")
 
