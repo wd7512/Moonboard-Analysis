@@ -1,7 +1,7 @@
 import argparse
+import json
 import sys
 from pathlib import Path
-from typing import Any
 
 import matplotlib
 matplotlib.use("Agg")  # headless-friendly
@@ -11,6 +11,7 @@ import numpy as np
 import torch
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
+from typing import Any
 
 from moonboard_analysis.config import AutoencoderConfig
 from moonboard_analysis.models.autoencoder import Autoencoder
