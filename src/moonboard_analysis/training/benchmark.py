@@ -14,6 +14,12 @@ import torch
 import torch.nn as nn
 from sklearn.model_selection import KFold
 
+# Module constants
+DEFAULT_N_SPLITS = 5
+DEFAULT_TEST_SIZE = 0.2
+MIN_N_SPLITS = 1
+MAX_N_SPLITS = 10
+
 
 class MetricComputer(ABC):
     """Abstract base class for benchmark metrics (SOLID: Interface Segregation).
@@ -54,6 +60,8 @@ class ExactAccuracy(MetricComputer):
         Returns:
             Proportion of exact matches in [0, 1]
         """
+        if len(y_true) == 0:
+            return 0.0
         matches = (y_true == y_pred).sum()
         return float(matches) / len(y_true)
 
@@ -76,6 +84,8 @@ class WithinOneGrade(MetricComputer):
         Returns:
             Proportion of predictions within 1 grade level in [0, 1]
         """
+        if len(y_true) == 0:
+            return 0.0
         within_one = (np.abs(y_true - y_pred) <= 1).sum()
         return float(within_one) / len(y_true)
 
@@ -98,6 +108,8 @@ class WithinTwoGrades(MetricComputer):
         Returns:
             Proportion of predictions within 2 grade levels in [0, 1]
         """
+        if len(y_true) == 0:
+            return 0.0
         within_two = (np.abs(y_true - y_pred) <= 2).sum()
         return float(within_two) / len(y_true)
 
@@ -233,7 +245,7 @@ class BenchmarkHarness:
         self,
         features: np.ndarray,
         labels: np.ndarray,
-        n_splits: int = 5,
+        n_splits: int = DEFAULT_N_SPLITS,
     ) -> BenchmarkResults:
         """Run n-fold cross-validation benchmark.
 
@@ -244,7 +256,18 @@ class BenchmarkHarness:
 
         Returns:
             BenchmarkResults containing per-fold metric scores.
+
+        Raises:
+            ValueError: If n_splits is not in range [1, 10].
         """
+        # Validate n_splits
+        if not isinstance(n_splits, int):
+            raise TypeError(f"n_splits must be an integer, got {type(n_splits).__name__}")
+        if n_splits < MIN_N_SPLITS or n_splits > MAX_N_SPLITS:
+            raise ValueError(
+                f"n_splits must be between {MIN_N_SPLITS} and {MAX_N_SPLITS}, got {n_splits}"
+            )
+
         kfold = KFold(n_splits=n_splits, shuffle=True, random_state=42)
         fold_results: list[dict[str, float]] = []
 

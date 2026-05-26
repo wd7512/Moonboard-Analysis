@@ -33,6 +33,7 @@ moonboard-train-ae = "moonboard_analysis.scripts.train_autoencoder:main"
 moonboard-compare-pca = "moonboard_analysis.scripts.compare_pca:main"
 moonboard-train-lstm = "moonboard_analysis.scripts.train_lstm:main"
 moonboard-evaluate-lstm = "moonboard_analysis.scripts.evaluate_lstm:main"
+moonboard-benchmark = "moonboard_analysis.scripts.benchmark:main"
 moonboard-viz-ae = "moonboard_analysis.scripts.launch_autoencoder_viz:main"
 
 [tool.hatch.build.targets.wheel]
