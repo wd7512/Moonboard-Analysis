@@ -25,11 +25,19 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
+Or with [uv](https://docs.astral.sh/uv/):
+
+```bash
+uv sync
+```
+
 ## Components
 
 ### Autoencoder Route Compression
 
-Compresses 164-dimensional binary hold vectors into a low-dimensional bottleneck and reconstructs them. Compared against PCA across 7 compression ratios.
+Compresses 164-dimensional binary hold vectors into a low-dimensional
+bottleneck and reconstructs them. Compared against PCA across 7 compression
+ratios.
 
 ```bash
 moonboard-train-ae
@@ -44,19 +52,100 @@ Key results (autoencoder vs PCA at 5% bottleneck):
 
 ### LSTM Grade Classification
 
-Predicts route grade (6B+ through 8A) from the ordered sequence of holds using a 3-layer LSTM with class-weighted loss.
+Predicts route grade (6B+ through 8A) from the ordered sequence of holds
+using a 3-layer LSTM with class-weighted loss.
 
 ```bash
 moonboard-train-lstm
 moonboard-evaluate-lstm
 ```
 
-Key results (at epoch 199/500):
+Current results (saved checkpoint, evaluation only):
 | Tolerance | Accuracy |
 |-----------|----------|
-| Exact | 82.2% |
-| Within 1 grade | 90.4% |
-| Within 2 grades | 95.5% |
+| Exact | 11.5% |
+| Within ±1 Grade | 11.5% |
+| Within ±2 Grades | 27.5% |
+| Within ±3 Grades | 51.9% |
+| Within ±4 Grades | 63.4% |
+
+> **Note:** The saved `LSTM_Moonboard.pth` checkpoint is from an incomplete training run.
+> Run `moonboard-train-lstm` to train a proper model, then re-evaluate.
+
+## Benchmark
+
+We evaluate grade classification performance using an 80/20 train-test split
+on the Moonboard dataset by default. 80% of routes are used for training and
+20% for evaluation, with stratified sampling to preserve grade distribution.
+
+**Note for researchers:** The `BenchmarkHarness` class in `training/benchmark.py`
+supports n-fold cross-validation for more rigorous evaluation. The CLI script
+uses a simple 80/20 split for faster inference.
+
+### Metrics
+
+We report three tolerance-based metrics:
+
+- **Exact Match**: Predicted grade matches true grade exactly
+- **Within ±1 Grade**: Predicted grade within one step of true grade
+  (e.g., 7A+ for true 7A is acceptable)
+- **Within ±2 Grades**: Predicted grade within two steps of true grade
+  (e.g., 7B for true 7A is acceptable)
+
+Grade hierarchy: 6B+, 6C, 6C+, 7A, 7A+, 7B, 7B+, 7C, 7C+, 8A, 8A+, ...
+
+### Leaderboard
+
+| Model           | Exact (%) | Within ±1 (%) | Within ±2 (%) |
+|-----------------|-----------|---------------|---------------|
+| LSTM Baseline   | 11.5      | 11.5          | 27.5          |
+| *Target*        | *82.2*    | *90.4*        | *95.5*        |
+
+> The *Target* row shows expected performance after proper training (500 epochs).
+> Submit a PR to claim the leaderboard with your trained model!
+
+The baseline uses a 3-layer LSTM with:
+- 128-dim embeddings for 164 hold types
+- 256-dim hidden state
+- Class-weighted cross-entropy loss to handle grade imbalance
+- Trained for 500 epochs with Adam optimizer (lr=0.001)
+
+### Usage
+
+Run the benchmark on a new model:
+
+```bash
+moonboard-evaluate-lstm --model-path path/to/model.pth --seed 42
+```
+
+For help and more options:
+
+```bash
+moonboard-evaluate-lstm --help
+```
+
+Example output shows exact and within-tolerance accuracies:
+
+```
+==================================================
+Evaluation Results
+==================================================
+Test Loss: 0.5234
+Exact Accuracy: 0.8220
+Within-1 Accuracy: 0.9040
+Within-2 Accuracy: 0.9550
+```
+
+### Contributing
+
+**Want to beat our baseline?** We welcome new model architectures,
+feature engineering, or training techniques. Submit a PR with:
+
+1. Updated model code in `src/moonboard_analysis/models/`
+2. Evaluation results using the same benchmark setup
+3. A brief description of your approach
+
+We'll update the leaderboard with top-performing models!
 
 ## Reproducibility
 

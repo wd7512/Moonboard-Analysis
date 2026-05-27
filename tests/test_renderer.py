@@ -124,7 +124,7 @@ class TestRenderComparison:
         fig = renderer.render_comparison(
             sample_grid, sample_grid, title="Test Comparison"
         )
-        assert fig._suptitle is not None
+        assert fig._suptitle is not None  # type: ignore[attr-defined]
 
     def test_closes_figure(
         self, renderer: GridRenderer, sample_grid: np.ndarray

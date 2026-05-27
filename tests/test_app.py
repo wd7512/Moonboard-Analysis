@@ -173,7 +173,7 @@ class TestTypeCoercion:
         _ = _compute_latent_ranges(model, features, device, model.bottleneck_dim)
 
         # Mix of strings and floats (simulating Gradio 5 behavior)
-        mixed_values = [1.5, "2.0", 0.5, "3.0", 1.0, "2.5", 0.8, "1.2"]
+        mixed_values: list[float | str] = [1.5, "2.0", 0.5, "3.0", 1.0, "2.5", 0.8, "1.2"]
         coerced = [float(v) for v in mixed_values]
 
         latent = np.array(coerced, dtype=np.float32).reshape(1, -1)
