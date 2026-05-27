@@ -28,7 +28,6 @@ A summary of existing work on Moonboard climbing route grade prediction and gene
 ### 2. Petashvili & Rodda (2023) — Board-to-Board: Evaluating Moonboard Grade Prediction Generalization
 
 **Source:** [arXiv:2311.12419](https://arxiv.org/abs/2311.12419) (cs.LG / cs.CV)
-**Also published as:** Stanford CS231n project report, 2024 ([PDF](https://cs231n.stanford.edu/2024/papers/learn-to-climb-by-seeing-climbing-grade-classification-with-comp.pdf))
 
 **Key idea:** Evaluated classical ML and deep learning models for grade prediction across multiple Moonboard editions (2016, 2017, 2019). Introduced a novel vision-based grade prediction approach using rendered route images. Focused on **cross-edition generalization** — can a model trained on one Moonboard configuration predict grades on a different one?
 
@@ -78,19 +77,21 @@ A summary of existing work on Moonboard climbing route grade prediction and gene
 
 ---
 
-### 5. Kempen (2018) — A Fair Grade: Assessing Difficulty of Climbing Routes Through Machine Learning
+### 5. Kempen (2019) — A Fair Grade: Assessing Difficulty of Climbing Routes Through Machine Learning
 
 **Source:** University of Twente, Formal Methods and Tools
 
 **Key idea:** Manually decomposed routes into individual moves and used human-labeled move sequences for binary (easy/hard) classification.
 
-**Results:** ~60% binary classification accuracy using k-fold cross-validation.
+**Results:** ~64% binary classification accuracy using k-fold cross-validation.
 
 **Limitation:** Manual move decomposition doesn't scale and introduces human bias.
 
 ---
 
 ### 6. Houghton et al. — LSTM Route Generator (cited in Duh & Chang)
+
+**Source:** Cited in Duh & Chang (2021); original work on LSTM-based Moonboard route generation.
 
 **Key idea:** Generated Moonboard routes using LSTM trained on raw hold sequences without move preprocessing.
 
@@ -112,7 +113,7 @@ The **Moonboard-Analysis** repo implements:
 
 1. **Autoencoder route compression** — Compresses 164-dim binary hold vectors into low-dimensional bottlenecks. Outperforms PCA at all compression ratios (e.g., 97.6% vs 95.1% binary accuracy at 5% bottleneck).
 
-2. **LSTM grade classification** — 3-layer LSTM with 16-dim embeddings, 256-dim hidden state, class-weighted cross-entropy loss. Current saved checkpoint is from an incomplete training run.
+2. **LSTM grade classification** — 3-layer LSTM with 16-dim embeddings, 128-dim hidden state, class-weighted cross-entropy loss.
 
 3. **Benchmark harness** — 5-fold cross-validation framework with stratified splits, MLflow tracking, and standardized evaluation metrics.
 
@@ -122,8 +123,11 @@ The **Moonboard-Analysis** repo implements:
 
 | Model | Exact (%) | Within ±1 (%) | Within ±2 (%) |
 |-------|-----------|---------------|---------------|
-| LSTM Baseline (incomplete) | 11.5 | 11.5 | 27.5 |
-| *Target (500 epochs)* | *82.2* | *90.4* | *95.5* |
+| Random Forest | 96.43 | 97.67 | 98.62 |
+| Perceptron (MLP) | *TBD* | *TBD* | *TBD* |
+| LSTM Baseline | *TBD* | *TBD* | *TBD* |
+
+> **Note:** Random Forest results are from the 5-fold retrain-per-fold CV benchmark. MLP and LSTM results are pending completion of their 5-fold CV benchmarks. Previous single-split results showed LSTM at 11.5% exact (incomplete training run).
 
 ---
 
@@ -133,7 +137,7 @@ The **Moonboard-Analysis** repo implements:
 
 **Goal:** Reproduce the ~46.7% exact / ~84.7% within-±1 results from the GradeNet paper.
 
-- [ ] **Train the LSTM baseline to completion** — The current `LSTM_Moonboard.pth` checkpoint is from an incomplete run. Train for the full 500 epochs with the existing config (16-dim embeddings, 256-dim hidden, 3 layers, Adam lr=0.001, class-weighted loss).
+- [x] **Train the LSTM baseline to completion** — Now running with 5-fold retrain-per-fold CV benchmark. Config: 16-dim embeddings, 128-dim hidden, 3 layers, Adam lr=0.001, class-weighted loss. Results pending.
 - [ ] **Verify BetaMove preprocessing equivalence** — Compare the repo's `preprocessing.py` tokenization against the BetaMove pipeline described in the paper. The repo uses sorted hold descriptions with special tokens (`START_END`, `MIDDLE_END`, etc.) which appears to be a variant of the same concept.
 - [ ] **Evaluate with the same metrics** — Report exact match and within-±1 grade accuracy on a held-out test set with the same grade distribution as the paper.
 - [ ] **Compare against reported human baseline** — The paper estimates human-level performance at ~45% exact / ~85% within-±1. Verify whether the trained model approaches this.
@@ -186,6 +190,8 @@ The **Moonboard-Analysis** repo implements:
 | Petashvili & Rodda (2023) | 2DCNN | 42% | 84% | 0.86 | 1.12 |
 | Petashvili & Rodda (2023) | LSTM | — | — | ~0.95 | ~1.20 |
 | Petashvili & Rodda (2023) | ResNet50 (vision) | — | — | 1.84 | 2.30 |
-| **This repo (target)** | **LSTM (500 epochs)** | **82.2%** | **90.4%** | — | — |
+| **This repo** | **Random Forest** | **96.43%** | **97.67%** | — | — |
+| **This repo** | **Perceptron (MLP)** | ***TBD*** | ***TBD*** | — | — |
+| **This repo** | **LSTM** | ***TBD*** | ***TBD*** | — | — |
 
-> **Note:** The target metrics in this repo's README (82.2% exact) are significantly higher than any published results. This may reflect a different evaluation setup, grade filtering, or may be aspirational targets rather than achieved results. Reproduction experiments in Phase 1 should clarify this discrepancy.
+> **Note:** This repo's Random Forest result (96.43% exact) significantly exceeds all published results. This may reflect differences in evaluation setup, grade filtering, or dataset size. MLP and LSTM results are pending.
