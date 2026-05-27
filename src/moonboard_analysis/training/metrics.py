@@ -42,7 +42,7 @@ def evaluate_classification(
     """Compute per-class and overall classification metrics."""
     from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
 
-    conf_matrix = confusion_matrix(y_true, y_pred)
+    conf_matrix = confusion_matrix(y_true, y_pred, labels=range(num_classes))
     precision, recall, f1, _ = precision_recall_fscore_support(
         y_true, y_pred, labels=range(num_classes), zero_division=0
     )
