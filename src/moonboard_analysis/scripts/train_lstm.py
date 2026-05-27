@@ -142,7 +142,10 @@ def main() -> None:
     for cls, w in zip(unique_classes, class_weights_present):
         class_weights_full[cls] = w
     class_weights_tensor = torch.tensor(class_weights_full, dtype=torch.float32, device=device)
-    print(f"Class weights: {dict(zip(unique_classes.tolist(), class_weights_present.round(4).tolist()))}")
+    print(
+        f"Class weights: "
+        f"{dict(zip(unique_classes.tolist(), class_weights_present.round(4).tolist()))}"
+    )
 
     criterion = nn.CrossEntropyLoss(weight=class_weights_tensor)
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)

@@ -8,7 +8,8 @@ Exposes train_and_evaluate() for use by the benchmark harness.
 
 Usage:
     uv run python submissions/perceptron-baseline/main.py --help
-    uv run python submissions/perceptron-baseline/main.py --data-path Raw/moonboard_problems_setup_2016.json
+    uv run python submissions/perceptron-baseline/main.py \\
+        --data-path Raw/moonboard_problems_setup_2016.json
 """
 
 import argparse
@@ -267,7 +268,7 @@ def train_and_evaluate(
     best_test_loss = float("inf")
     best_epoch = 0
     for epoch in range(epochs):
-        train_loss = train_epoch(model, train_loader, criterion, optimizer, device)
+        _ = train_epoch(model, train_loader, criterion, optimizer, device)
         test_loss, test_acc = evaluate(model, test_loader, criterion, device)
         scheduler.step(test_loss)
         if test_loss < best_test_loss:

@@ -47,6 +47,11 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
 
+[tool.ruff.lint.extend-per-file-ignores]
+# Legacy exploration code — don't lint
+"archive/**" = ["ALL"]
+"notebooks/**" = ["ALL"]
+
 [tool.mypy]
 strict = false
 python_version = "3.11"

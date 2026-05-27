@@ -1,13 +1,17 @@
-"""submissions/tree-baseline — Random Forest grade predictor baseline.
+"""submissions/ridge-baseline — Ridge regression grade predictor baseline.
 
-Trains a Random Forest classifier on 164-dimensional binary hold vectors
-and evaluates using exact, within-1, and within-2 grade accuracy metrics.
+Trains a Ridge regression classifier on Moonboard route data. Each route is
+converted to a 164-dimensional binary hold vector (3 layers: start/middle/end),
+then a Ridge regression model is trained to predict the climbing grade.
+
+The model predicts continuous values which are rounded to the nearest integer
+grade index for classification metrics.
 
 Exposes train_and_evaluate() for use by the benchmark harness.
 
 Usage:
-    uv run python submissions/tree-baseline/main.py --help
-    uv run python submissions/tree-baseline/main.py \\
+    uv run python submissions/ridge-baseline/main.py --help
+    uv run python submissions/ridge-baseline/main.py \\
         --data-path Raw/moonboard_problems_setup_2016.json
 """
 
@@ -16,7 +20,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import Ridge
 from sklearn.model_selection import train_test_split
 
 from moonboard_analysis.config import GRADE_ORDER
@@ -31,7 +35,7 @@ from moonboard_analysis.utils.reproducibility import set_seeds
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Tree baseline — Random Forest grade classifier on binary hold vectors"
+        description="Ridge regression baseline — train and evaluate on Moonboard data"
     )
     parser.add_argument(
         "--data-path",
@@ -52,10 +56,10 @@ def parse_args() -> argparse.Namespace:
         help="Random seed for reproducibility (default: 42)",
     )
     parser.add_argument(
-        "--n-estimators",
-        type=int,
-        default=200,
-        help="Number of trees in the Random Forest (default: 200)",
+        "--alpha",
+        type=float,
+        default=1.0,
+        help="Ridge regularization strength (default: 1.0)",
     )
     return parser.parse_args()
 
@@ -119,17 +123,19 @@ def train_and_evaluate(
     train_idx: np.ndarray,
     test_idx: np.ndarray,
     seed: int = 42,
-    n_estimators: int = 200,
+    alpha: float = 1.0,
 ) -> dict[str, float]:
-    """Train a fresh Random Forest on the training fold and evaluate on test fold.
+    """Train a fresh Ridge regression model on the training fold and evaluate on test fold.
 
     Args:
-        sequences: Preprocessed route sequences (list of token lists) including
-            grade tokens at position -2 and GRADE_END at position -1.
-        grades: Encoded grade labels (used for filtering, not the sequence grades).
-        train_idx: Indices for the training fold.
-        test_idx: Indices for the test fold.
+        sequences: Full preprocessed route sequences. Each sequence includes
+            hold tokens followed by the grade string at index [-2] and
+            'GRADE_END' at index [-1].
+        grades: Integer-encoded grade labels (parallel to sequences).
+        train_idx: Indices into sequences/grades for the training fold.
+        test_idx: Indices into sequences/grades for the test fold.
         seed: Random seed for reproducibility.
+        alpha: Ridge regularization strength.
 
     Returns:
         Dict with exact_accuracy, within_one_grade, within_two_grades.
@@ -143,25 +149,24 @@ def train_and_evaluate(
     features_list_test, labels_test = sequences_to_grids(test_seqs)
 
     X_train = np.array(features_list_train, dtype=np.float32)
-    y_train = np.array(labels_train, dtype=np.int64)
+    y_train = np.array(labels_train, dtype=np.float32)
     X_test = np.array(features_list_test, dtype=np.float32)
     y_test = np.array(labels_test, dtype=np.int64)
 
     num_classes = len(GRADE_ORDER)
 
-    clf = RandomForestClassifier(
-        n_estimators=n_estimators,
-        random_state=seed,
-        n_jobs=-1,
-    )
-    clf.fit(X_train, y_train)
-    y_pred = clf.predict(X_test).tolist()
-    y_test_list = y_test.tolist()
+    model = Ridge(alpha=alpha, random_state=seed)
+    model.fit(X_train, y_train)
 
+    # Round predictions to nearest valid grade index
+    y_pred_raw = model.predict(X_test)
+    y_pred = np.clip(np.round(y_pred_raw), 0, num_classes - 1).astype(int)
+
+    # Compute metrics via confusion matrix
     from sklearn.metrics import confusion_matrix
 
     conf_matrix = confusion_matrix(
-        y_test_list, y_pred, labels=range(num_classes)
+        y_test, y_pred, labels=range(num_classes)
     )
 
     total_correct = sum(conf_matrix[i][i] for i in range(num_classes))
@@ -223,22 +228,18 @@ def main() -> None:
     )
     print(f"Train: {X_train.shape[0]}  Test: {X_test.shape[0]}")
 
-    print(f"Training Random Forest (n_estimators={args.n_estimators})...")
-    clf = RandomForestClassifier(
-        n_estimators=args.n_estimators,
-        random_state=args.seed,
-        n_jobs=-1,
-    )
-    clf.fit(X_train, y_train)
+    print(f"Ridge regression (alpha={args.alpha})...")
+    model = Ridge(alpha=args.alpha, random_state=args.seed)
+    model.fit(X_train, y_train.astype(np.float32))
     print("Training complete.")
 
-    y_pred = clf.predict(X_test).tolist()
-    y_test_list = y_test.tolist()
+    y_pred_raw = model.predict(X_test)
+    y_pred = np.clip(np.round(y_pred_raw), 0, num_classes - 1).astype(int)
 
     from sklearn.metrics import confusion_matrix
 
     conf_matrix = confusion_matrix(
-        y_test_list, y_pred, labels=range(num_classes)
+        y_test, y_pred, labels=range(num_classes)
     )
 
     total_correct = sum(conf_matrix[i][i] for i in range(num_classes))
@@ -264,8 +265,8 @@ def main() -> None:
 
     import joblib
 
-    save_path = output_dir / "tree_model.joblib"
-    joblib.dump(clf, save_path)
+    save_path = output_dir / "ridge_model.joblib"
+    joblib.dump(model, save_path)
     print(f"Model saved to: {save_path}")
 
 
