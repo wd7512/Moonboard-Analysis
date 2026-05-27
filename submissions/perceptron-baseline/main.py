@@ -4,6 +4,8 @@ Trains a 3-layer MLP classifier on Moonboard route data. Each route is
 flattened to a fixed-size binary hold vector, then passed through fully
 connected layers to predict the climbing grade.
 
+Exposes train_and_evaluate() for use by the benchmark harness.
+
 Usage:
     uv run python submissions/perceptron-baseline/main.py --help
     uv run python submissions/perceptron-baseline/main.py --data-path Raw/moonboard_problems_setup_2016.json
@@ -30,11 +32,9 @@ from moonboard_analysis.training.metrics import evaluate_classification
 from moonboard_analysis.utils.device import get_device
 from moonboard_analysis.utils.reproducibility import set_seeds
 
-
-# -- Constants --
-NUM_COLS = 11  # A-K
-NUM_ROWS = 18  # 1-18
-HOLD_VECTOR_DIM = NUM_COLS * NUM_ROWS  # 198
+NUM_COLS = 11
+NUM_ROWS = 18
+HOLD_VECTOR_DIM = NUM_COLS * NUM_ROWS
 
 
 def parse_args() -> argparse.Namespace:
@@ -93,17 +93,6 @@ def parse_args() -> argparse.Namespace:
 
 
 def hold_to_index(hold_name: str) -> int:
-    """Convert a hold name like 'B5' or 'START_END' to a grid index.
-
-    Only actual hold names (letter + number) are mapped; special tokens
-    return -1 and are ignored.
-
-    Args:
-        hold_name: Hold description, e.g. 'B5', 'K10', or a sentinel token.
-
-    Returns:
-        Flat index into the 11x18 binary vector, or -1 for non-hold tokens.
-    """
     if len(hold_name) < 2:
         return -1
     col_char = hold_name[0]
@@ -115,24 +104,13 @@ def hold_to_index(hold_name: str) -> int:
     row = int(row_part)
     if row < 1 or row > 18:
         return -1
-    col = ord(col_char) - ord("A")  # 0-10
+    col = ord(col_char) - ord("A")
     return (row - 1) * NUM_COLS + col
 
 
 def sequences_to_vectors(
     route_sequences: list[list[str]],
 ) -> np.ndarray:
-    """Convert a list of hold-name sequences to fixed-size binary vectors.
-
-    Each route is encoded as a binary vector where 1 indicates the
-    corresponding hold is used in the route.
-
-    Args:
-        route_sequences: List of routes, each a list of hold name strings.
-
-    Returns:
-        Array of shape (n_routes, HOLD_VECTOR_DIM) with dtype float32.
-    """
     vectors = np.zeros((len(route_sequences), HOLD_VECTOR_DIM), dtype=np.float32)
     for i, seq in enumerate(route_sequences):
         for token in seq:
@@ -143,12 +121,6 @@ def sequences_to_vectors(
 
 
 class MLPClassifier(nn.Module):
-    """3-layer MLP for Moonboard grade classification.
-
-    Architecture: input -> hidden -> hidden//2 -> num_classes
-    with ReLU activations and dropout.
-    """
-
     def __init__(
         self, input_dim: int, hidden_dim: int, num_classes: int, dropout: float = 0.3
     ):
@@ -174,7 +146,6 @@ def train_epoch(
     optimizer: optim.Optimizer,
     device: torch.device,
 ) -> float:
-    """Train for one epoch. Returns average loss."""
     model.train()
     total_loss = 0.0
     n_batches = 0
@@ -196,7 +167,6 @@ def evaluate(
     criterion: nn.Module,
     device: torch.device,
 ) -> tuple[float, float]:
-    """Evaluate on a dataset. Returns (avg_loss, accuracy)."""
     model.eval()
     total_loss = 0.0
     n_batches = 0
@@ -215,11 +185,109 @@ def evaluate(
     return total_loss / max(n_batches, 1), correct / total
 
 
+def train_and_evaluate(
+    sequences: list[list[str]],
+    grades: list[int],
+    train_idx: np.ndarray,
+    test_idx: np.ndarray,
+    seed: int = 42,
+    hidden_dim: int = 128,
+    epochs: int = 300,
+    batch_size: int = 32,
+    learning_rate: float = 0.001,
+    dropout: float = 0.3,
+) -> dict[str, float]:
+    """Train a fresh MLP on the training fold and evaluate on test fold.
+
+    Args:
+        sequences: Preprocessed route sequences (list of token lists).
+        grades: Encoded grade labels.
+        train_idx: Indices for the training fold.
+        test_idx: Indices for the test fold.
+        seed: Random seed for reproducibility.
+
+    Returns:
+        Dict with exact_accuracy, within_one_grade, within_two_grades.
+    """
+    set_seeds(seed)
+
+    train_seqs = [sequences[i] for i in train_idx]
+    test_seqs = [sequences[i] for i in test_idx]
+    train_grades = [grades[i] for i in train_idx]
+    test_grades = [grades[i] for i in test_idx]
+
+    train_holds: list[list[str]] = []
+    test_holds: list[list[str]] = []
+    for seq in train_seqs:
+        holds = [t for t in seq if hold_to_index(t) >= 0]
+        train_holds.append(holds)
+    for seq in test_seqs:
+        holds = [t for t in seq if hold_to_index(t) >= 0]
+        test_holds.append(holds)
+
+    X_train = sequences_to_vectors(train_holds)
+    X_test = sequences_to_vectors(test_holds)
+    y_train = np.array(train_grades, dtype=np.int64)
+    y_test = np.array(test_grades, dtype=np.int64)
+
+    num_classes = len(GRADE_ORDER)
+
+    train_ds = TensorDataset(
+        torch.tensor(X_train, dtype=torch.float32),
+        torch.tensor(y_train, dtype=torch.long),
+    )
+    test_ds = TensorDataset(
+        torch.tensor(X_test, dtype=torch.float32),
+        torch.tensor(y_test, dtype=torch.long),
+    )
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test_ds, batch_size=batch_size)
+
+    device = get_device()
+    model = MLPClassifier(
+        input_dim=HOLD_VECTOR_DIM,
+        hidden_dim=hidden_dim,
+        num_classes=num_classes,
+        dropout=dropout,
+    ).to(device)
+
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode="min", factor=0.5, patience=15
+    )
+
+    best_test_loss = float("inf")
+    for epoch in range(epochs):
+        train_loss = train_epoch(model, train_loader, criterion, optimizer, device)
+        test_loss, test_acc = evaluate(model, test_loader, criterion, device)
+        scheduler.step(test_loss)
+        if test_loss < best_test_loss:
+            best_test_loss = test_loss
+
+    all_preds: list[int] = []
+    all_labels: list[int] = []
+    model.eval()
+    with torch.no_grad():
+        for features, lbls in test_loader:
+            features = features.to(device)
+            outputs = model(features)
+            _, predicted = torch.max(outputs, 1)
+            all_preds.extend(predicted.cpu().numpy().tolist())
+            all_labels.extend(lbls.numpy().tolist())
+
+    metrics = evaluate_classification(all_labels, all_preds, num_classes)
+    return {
+        "exact_accuracy": metrics["exact_accuracy"],
+        "within_one_grade": metrics["within_1_accuracy"],
+        "within_two_grades": metrics["within_2_accuracy"],
+    }
+
+
 def main() -> None:
     args = parse_args()
     set_seeds(args.seed)
 
-    # -- Resolve paths --
     data_path = args.data_path
     if not Path(data_path).exists():
         print(f"Error: Data file not found at '{data_path}'")
@@ -229,22 +297,19 @@ def main() -> None:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # -- Load & preprocess --
     print(f"Loading data from {data_path}")
     df = load_lstm_data(data_path)
     print(f"Raw data: {len(df)} routes")
 
-    sequences = preprocess_lstm_data(df)
-    sequences = drop_duplicate_sequences(sequences)
-    print(f"After preprocessing: {len(sequences)} unique sequences")
+    all_sequences = preprocess_lstm_data(df)
+    all_sequences = drop_duplicate_sequences(all_sequences)
+    print(f"After preprocessing: {len(all_sequences)} unique sequences")
 
-    # -- Extract hold sequences & grades --
     route_sequences: list[list[str]] = []
     route_grades: list[str] = []
-    for seq in sequences:
+    for seq in all_sequences:
         grade = seq[-2]
         if grade in GRADE_ORDER:
-            # Filter out sentinel tokens (START_END, MIDDLE_END, etc.)
             holds = [t for t in seq[:-2] if hold_to_index(t) >= 0]
             route_sequences.append(holds)
             route_grades.append(grade)
@@ -257,11 +322,9 @@ def main() -> None:
     print(f"Hold vector dim: {HOLD_VECTOR_DIM}")
     print(f"Number of classes: {num_classes}")
 
-    # -- Convert sequences to binary vectors --
     X = sequences_to_vectors(route_sequences)
     y = np.array(encoded_grades, dtype=np.int64)
 
-    # -- Train/test split --
     X_train, X_test, y_train, y_test = train_test_split(
         X,
         y,
@@ -282,7 +345,6 @@ def main() -> None:
     train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True)
     test_loader = DataLoader(test_ds, batch_size=args.batch_size)
 
-    # -- Build model --
     device = get_device()
     print(f"Training on device: {device}")
 
@@ -299,7 +361,6 @@ def main() -> None:
         optimizer, mode="min", factor=0.5, patience=15
     )
 
-    # -- Training loop --
     best_test_loss = float("inf")
     for epoch in range(args.epochs):
         train_loss = train_epoch(model, train_loader, criterion, optimizer, device)
@@ -315,17 +376,16 @@ def main() -> None:
         if test_loss < best_test_loss:
             best_test_loss = test_loss
 
-    # -- Final evaluation --
     all_preds: list[int] = []
     all_labels: list[int] = []
     model.eval()
     with torch.no_grad():
-        for features, labels in test_loader:
+        for features, lbls in test_loader:
             features = features.to(device)
             outputs = model(features)
             _, predicted = torch.max(outputs, 1)
             all_preds.extend(predicted.cpu().numpy().tolist())
-            all_labels.extend(labels.numpy().tolist())
+            all_labels.extend(lbls.numpy().tolist())
 
     metrics = evaluate_classification(all_labels, all_preds, num_classes)
 
@@ -337,7 +397,6 @@ def main() -> None:
     print(f"Within-1 Accuracy:   {metrics['within_1_accuracy']:.4f}")
     print(f"Within-2 Accuracy:   {metrics['within_2_accuracy']:.4f}")
 
-    # -- Save model --
     save_path = output_dir / "Perceptron_Moonboard.pth"
     torch.save(
         {

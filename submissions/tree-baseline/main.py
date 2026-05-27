@@ -3,6 +3,8 @@
 Trains a Random Forest classifier on 164-dimensional binary hold vectors
 and evaluates using exact, within-1, and within-2 grade accuracy metrics.
 
+Exposes train_and_evaluate() for use by the benchmark harness.
+
 Usage:
     uv run python submissions/tree-baseline/main.py --help
     uv run python submissions/tree-baseline/main.py --data-path Raw/moonboard_problems_setup_2016.json
@@ -12,7 +14,6 @@ import argparse
 import sys
 from pathlib import Path
 
-import joblib
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
@@ -61,15 +62,6 @@ def parse_args() -> argparse.Namespace:
 def sequences_to_grids(
     sequences: list[list[str]],
 ) -> tuple[list[np.ndarray], list[int]]:
-    """Convert route sequences to 164-dim binary feature vectors.
-
-    Each sequence is a flat token list: [start_holds..., 'START_END',
-    middle_holds..., 'MIDDLE_END', end_holds..., 'END_ROUTE', grade, 'GRADE_END'].
-
-    Returns:
-        features: List of 164-dim binary numpy arrays.
-        labels: List of integer grade indices.
-    """
     mapper = GridMapper()
     features: list[np.ndarray] = []
     labels: list[int] = []
@@ -81,9 +73,8 @@ def sequences_to_grids(
         if grade not in grade_to_idx:
             continue
 
-        tokens = seq[:-2]  # remove grade and 'GRADE_END'
+        tokens = seq[:-2]
 
-        # Split into start / middle / end sections
         start_holds: list[str] = []
         middle_holds: list[str] = []
         end_holds: list[str] = []
@@ -95,7 +86,7 @@ def sequences_to_grids(
             elif token == "MIDDLE_END":
                 section = "end"
             elif token == "END_ROUTE":
-                pass  # sentinel, already in end
+                pass
             elif section == "start":
                 start_holds.append(token)
             elif section == "middle":
@@ -103,7 +94,6 @@ def sequences_to_grids(
             elif section == "end":
                 end_holds.append(token)
 
-        # Build 3x18x11 grid
         grid = np.zeros((3, 18, 11), dtype=np.float32)
         for hold in start_holds:
             row, col = GridMapper._convert_key(hold)
@@ -122,11 +112,81 @@ def sequences_to_grids(
     return features, labels
 
 
+def train_and_evaluate(
+    sequences: list[list[str]],
+    grades: list[int],
+    train_idx: np.ndarray,
+    test_idx: np.ndarray,
+    seed: int = 42,
+    n_estimators: int = 200,
+) -> dict[str, float]:
+    """Train a fresh Random Forest on the training fold and evaluate on test fold.
+
+    Args:
+        sequences: Preprocessed route sequences (list of token lists) including
+            grade tokens at position -2 and GRADE_END at position -1.
+        grades: Encoded grade labels (used for filtering, not the sequence grades).
+        train_idx: Indices for the training fold.
+        test_idx: Indices for the test fold.
+        seed: Random seed for reproducibility.
+
+    Returns:
+        Dict with exact_accuracy, within_one_grade, within_two_grades.
+    """
+    set_seeds(seed)
+
+    train_seqs = [sequences[i] for i in train_idx]
+    test_seqs = [sequences[i] for i in test_idx]
+
+    features_list_train, labels_train = sequences_to_grids(train_seqs)
+    features_list_test, labels_test = sequences_to_grids(test_seqs)
+
+    X_train = np.array(features_list_train, dtype=np.float32)
+    y_train = np.array(labels_train, dtype=np.int64)
+    X_test = np.array(features_list_test, dtype=np.float32)
+    y_test = np.array(labels_test, dtype=np.int64)
+
+    num_classes = len(GRADE_ORDER)
+
+    clf = RandomForestClassifier(
+        n_estimators=n_estimators,
+        random_state=seed,
+        n_jobs=-1,
+    )
+    clf.fit(X_train, y_train)
+    y_pred = clf.predict(X_test).tolist()
+    y_test_list = y_test.tolist()
+
+    from sklearn.metrics import confusion_matrix
+
+    conf_matrix = confusion_matrix(
+        y_test_list, y_pred, labels=range(num_classes)
+    )
+
+    total_correct = sum(conf_matrix[i][i] for i in range(num_classes))
+    exact_accuracy = total_correct / conf_matrix.sum()
+
+    def _within_k(k: int) -> float:
+        correct = 0
+        for i in range(num_classes):
+            for j in range(max(0, i - k), min(num_classes, i + k + 1)):
+                correct += conf_matrix[i, j]
+        return correct / conf_matrix.sum()
+
+    within_1 = _within_k(1)
+    within_2 = _within_k(2)
+
+    return {
+        "exact_accuracy": exact_accuracy,
+        "within_one_grade": within_1,
+        "within_two_grades": within_2,
+    }
+
+
 def main() -> None:
     args = parse_args()
     set_seeds(args.seed)
 
-    # -- Resolve paths --
     data_path = args.data_path
     if not Path(data_path).exists():
         print(f"Error: Data file not found at '{data_path}'")
@@ -136,7 +196,6 @@ def main() -> None:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # -- Load & preprocess --
     print(f"Loading data from {data_path}")
     df = load_lstm_data(data_path)
     print(f"Raw data: {len(df)} routes")
@@ -145,7 +204,6 @@ def main() -> None:
     sequences = drop_duplicate_sequences(sequences)
     print(f"After preprocessing: {len(sequences)} unique sequences")
 
-    # -- Convert to binary feature vectors --
     print("Converting sequences to 164-dim binary hold vectors...")
     features_list, labels = sequences_to_grids(sequences)
     X = np.array(features_list, dtype=np.float32)
@@ -155,7 +213,6 @@ def main() -> None:
     print(f"Feature matrix: {X.shape}")
     print(f"Number of classes: {num_classes}")
 
-    # -- Train/test split --
     X_train, X_test, y_train, y_test = train_test_split(
         X,
         y,
@@ -165,7 +222,6 @@ def main() -> None:
     )
     print(f"Train: {X_train.shape[0]}  Test: {X_test.shape[0]}")
 
-    # -- Train Random Forest --
     print(f"Training Random Forest (n_estimators={args.n_estimators})...")
     clf = RandomForestClassifier(
         n_estimators=args.n_estimators,
@@ -175,12 +231,9 @@ def main() -> None:
     clf.fit(X_train, y_train)
     print("Training complete.")
 
-    # -- Evaluate --
     y_pred = clf.predict(X_test).tolist()
     y_test_list = y_test.tolist()
 
-    # Build confusion matrix with all classes present (avoids dimension mismatch
-    # when some classes have no true samples in the test split).
     from sklearn.metrics import confusion_matrix
 
     conf_matrix = confusion_matrix(
@@ -208,7 +261,8 @@ def main() -> None:
     print(f"Within-1 Accuracy:   {within_1:.4f}")
     print(f"Within-2 Accuracy:   {within_2:.4f}")
 
-    # -- Save model --
+    import joblib
+
     save_path = output_dir / "tree_model.joblib"
     joblib.dump(clf, save_path)
     print(f"Model saved to: {save_path}")

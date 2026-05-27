@@ -1,63 +1,50 @@
-"""CLI script for benchmarking trained LSTM models.
+"""CLI script for running retrain-per-fold CV benchmark on submissions.
 
-This script loads a trained LSTM checkpoint, evaluates it on test data,
-computes comprehensive metrics, and generates results in JSON and Markdown format.
+Loads data, runs KFold cross-validation, calling each submission's
+train_and_evaluate() per fold, and outputs aggregated results.
 
 Usage:
-    moonboard-benchmark --model-path models/LSTM_Moonboard.pth \\
-        --data-path Raw/moonboard_problems_setup_2016.json \\
-        --output-json results.json \\
+    moonboard-benchmark --submission-dir submissions/lstm-baseline \
+        --data-path Raw/moonboard_problems_setup_2016.json \
+        --output-json results.json \
         --output-markdown results.md
 """
 
 import argparse
+import importlib.util
 import json
 import sys
 from datetime import datetime
 from pathlib import Path
 
-import mlflow
-import torch
-import torch.nn as nn
-from sklearn.model_selection import train_test_split
-from torch.utils.data import DataLoader
+import numpy as np
+from sklearn.model_selection import KFold
 
 from moonboard_analysis.config import GRADE_ORDER
-from moonboard_analysis.data.dataset import LSTMSequenceDataset
 from moonboard_analysis.data.loader import load_lstm_data
 from moonboard_analysis.data.preprocessing import (
     drop_duplicate_sequences,
     preprocess_lstm_data,
 )
-from moonboard_analysis.models.lstm import ClimbingGradePredictor
-from moonboard_analysis.training.metrics import evaluate_classification
-from moonboard_analysis.utils.device import get_device
+from moonboard_analysis.training.benchmark import BenchmarkResults
 from moonboard_analysis.utils.reproducibility import set_seeds
 
 
 def parse_args() -> argparse.Namespace:
-    """Parse command-line arguments for benchmark script.
-
-    Returns:
-        Parsed arguments with model_path, data_path, output_json, output_markdown.
-    """
     parser = argparse.ArgumentParser(
-        description="Benchmark trained LSTM model and generate results"
+        description="Run retrain-per-fold CV benchmark on a submission"
     )
     parser.add_argument(
-        "--model-path",
+        "--submission-dir",
         type=str,
-        default="models/LSTM_Moonboard.pth",
-        help="Path to trained LSTM checkpoint",
+        required=True,
+        help="Path to submission directory containing main.py",
     )
     parser.add_argument(
         "--data-path",
         type=str,
         default=None,
-        help=(
-            "Path to raw JSON data file (optional, defaults to "
-            "Raw/moonboard_problems_setup_2016.json"
-        ),
+        help="Path to raw Moonboard JSON data (default: Raw/moonboard_problems_setup_2016.json)",
     )
     parser.add_argument(
         "--output-json",
@@ -72,218 +59,116 @@ def parse_args() -> argparse.Namespace:
         help="Path to write results Markdown file",
     )
     parser.add_argument(
-        "--batch-size", type=int, default=32, help="Batch size for evaluation"
+        "--n-splits",
+        type=int,
+        default=5,
+        help="Number of CV folds (default: 5)",
     )
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
     return parser.parse_args()
 
 
-def build_vocab(sequences: list[list[str]]) -> dict[str, int]:
-    """Build vocabulary from sequences (0 is reserved for padding).
+def load_submission(submission_dir: str):
+    """Import train_and_evaluate from a submission's main.py.
 
     Args:
-        sequences: List of token sequences.
+        submission_dir: Path to submission directory.
 
     Returns:
-        Dict mapping token to index, with 0 reserved for PAD.
-    """
-    tokens = set()
-    for seq in sequences:
-        tokens.update(seq)
-    vocab = {token: i + 1 for i, token in enumerate(sorted(tokens))}
-    vocab["<PAD>"] = 0
-    return vocab
-
-
-def load_model_and_vocab(
-    model_path: str, device: torch.device
-) -> tuple[ClimbingGradePredictor, dict, dict]:
-    """Load trained LSTM model and vocabulary from checkpoint.
-
-    Args:
-        model_path: Path to the saved model checkpoint.
-        device: torch device for loading.
-
-    Returns:
-        Tuple of (model, vocab, config).
+        The train_and_evaluate function.
 
     Raises:
-        SystemExit: If model file not found.
+        SystemExit: If main.py is missing or lacks train_and_evaluate.
     """
-    if not Path(model_path).exists():
-        print(f"Error: Model file not found at '{model_path}'")
-        print("Train a model first with moonboard-train-lstm")
+    main_path = Path(submission_dir) / "main.py"
+    if not main_path.exists():
+        print(f"Error: No main.py found in '{submission_dir}'")
         sys.exit(1)
 
-    checkpoint = torch.load(model_path, map_location=device, weights_only=True)
+    spec = importlib.util.spec_from_file_location("submission_main", str(main_path))
+    if spec is None or spec.loader is None:
+        print(f"Error: Could not load '{main_path}'")
+        sys.exit(1)
 
-    # Handle both new and old checkpoint formats
-    if "config" in checkpoint:
-        config = checkpoint["config"]
-        vocab = checkpoint.get("vocab", {})
-    else:
-        # Old format fallback - infer config from state dict
-        print("Warning: Old checkpoint format detected. Inferring from state_dict.")
-        if isinstance(checkpoint, dict) and "embedding.weight" in checkpoint:
-            state_dict = checkpoint
-        elif "model_state_dict" in checkpoint:
-            state_dict = checkpoint["model_state_dict"]
-        else:
-            state_dict = checkpoint
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
 
-        # Infer dimensions from state dict
-        vocab_size = state_dict["embedding.weight"].shape[0]
-        embed_dim = state_dict["embedding.weight"].shape[1]
-        # lstm layer hidden size is the second dimension of lstm.weight_ih_l0
-        hidden_dim = state_dict["lstm.weight_ih_l0"].shape[0] // 4  # 4 gates in LSTM
-        layer_keys = [k for k in state_dict if "lstm.weight_ih_l" in k]
-        num_layers = max((int(k.split("_l")[-1]) for k in layer_keys), default=0) + 1
-        num_classes = state_dict["fc.bias"].shape[0]
+    if not hasattr(module, "train_and_evaluate"):
+        print(f"Error: 'main.py' in '{submission_dir}' must expose a train_and_evaluate function")
+        sys.exit(1)
 
-        config = {
-            "vocab_size": vocab_size,
-            "embed_dim": embed_dim,
-            "hidden_dim": hidden_dim,
-            "num_layers": num_layers,
-            "num_classes": num_classes,
-            "max_length": 50,
-        }
-        vocab = {}
-
-    model = ClimbingGradePredictor(
-        vocab_size=config["vocab_size"],
-        embed_dim=config["embed_dim"],
-        hidden_dim=config["hidden_dim"],
-        num_layers=config["num_layers"],
-        num_classes=config["num_classes"],
-    )
-
-    # Handle both new and old checkpoint state dict keys
-    if "model_state_dict" in checkpoint:
-        model.load_state_dict(checkpoint["model_state_dict"])
-    else:
-        # Try loading directly as state dict
-        model.load_state_dict(checkpoint)
-
-    model.to(device)
-    model.eval()
-
-    return model, vocab, config
+    return module.train_and_evaluate
 
 
-def format_leaderboard_summary(metrics: dict, grade_order: list[str]) -> str:
-    """Format a leaderboard-style summary of metrics.
+def format_leaderboard_summary(results: BenchmarkResults) -> str:
+    """Format a leaderboard-style summary of CV results.
 
     Args:
-        metrics: Dictionary of computed metrics.
-        grade_order: List of grade names in order.
+        results: BenchmarkResults with fold data.
 
     Returns:
         Formatted string for console display.
     """
+    means = results.mean_scores()
+    stds = results.std_scores()
+
     lines = []
     lines.append("\n" + "=" * 60)
-    lines.append("BENCHMARK RESULTS SUMMARY")
+    lines.append("CROSS-VALIDATION BENCHMARK RESULTS")
     lines.append("=" * 60)
-
-    lines.append("\nOverall Accuracy Metrics:")
-    lines.append(f"  Exact Match:       {metrics['exact_accuracy']:.4f}")
-    lines.append(f"  Within ±1 Grade:   {metrics['within_1_accuracy']:.4f}")
-    lines.append(f"  Within ±2 Grades:  {metrics['within_2_accuracy']:.4f}")
-    lines.append(f"  Within ±3 Grades:  {metrics['within_3_accuracy']:.4f}")
-    lines.append(f"  Within ±4 Grades:  {metrics['within_4_accuracy']:.4f}")
-
-    lines.append("\nPer-Grade Performance:")
-    lines.append(f"{'Grade':<8} {'Precision':<12} {'Recall':<12} {'F1':<12}")
-    lines.append("-" * 44)
-
-    num_actual = len(metrics["per_class_precision"])
-    for i, grade in enumerate(grade_order):
-        if i >= num_actual:
-            break
-        prec = metrics["per_class_precision"][i]
-        rec = metrics["per_class_recall"][i]
-        f1 = metrics["per_class_f1"][i]
-        lines.append(f"{grade:<8} {prec:<12.4f} {rec:<12.4f} {f1:<12.4f}")
-
+    lines.append(f"{'Metric':<25} {'Mean':<10} {'Std':<10}")
+    lines.append("-" * 45)
+    for metric_name in means:
+        lines.append(f"{metric_name:<25} {means[metric_name]:<10.4f} {stds[metric_name]:<10.4f}")
     lines.append("=" * 60)
     return "\n".join(lines)
 
 
 def generate_markdown_report(
-    results: dict,
-    model_path: str,
+    results: BenchmarkResults,
+    submission_dir: str,
     data_path: str,
-    metrics: dict,
-    num_classes: int,
+    n_splits: int,
 ) -> str:
-    """Generate a comprehensive Markdown report of benchmark results.
+    """Generate a comprehensive Markdown report of CV benchmark results.
 
     Args:
-        results: Dictionary with loss, metrics, summary from benchmark.
-        model_path: Path to evaluated model.
+        results: BenchmarkResults with fold data.
+        submission_dir: Path to evaluated submission.
         data_path: Path to evaluation data.
-        metrics: Dictionary of computed metrics.
-        num_classes: Number of classes in the model.
+        n_splits: Number of CV folds.
 
     Returns:
         Formatted Markdown string.
     """
-    lines = []
-    lines.append("# Moonboard LSTM Benchmark Results")
-    lines.append("")
+    means = results.mean_scores()
+    stds = results.std_scores()
 
+    lines = []
+    lines.append("# Moonboard CV Benchmark Results")
+    lines.append("")
     lines.append("## Metadata")
-    lines.append(f"- **Model**: {model_path}")
+    lines.append(f"- **Submission**: {submission_dir}")
     lines.append(f"- **Data**: {data_path}")
     lines.append(f"- **Timestamp**: {datetime.now().isoformat()}")
+    lines.append(f"- **CV Folds**: {n_splits}")
     lines.append("")
 
     lines.append("## Overall Metrics")
-    lines.append(
-        "| Metric | Value |"
-    )
-    lines.append("|--------|-------|")
-    lines.append(f"| Test Loss | {results['loss']:.6f} |")
-    lines.append(
-        f"| Exact Accuracy | {metrics['exact_accuracy']:.4f} |"
-    )
-    lines.append(
-        f"| Within ±1 Grade | {metrics['within_1_accuracy']:.4f} |"
-    )
-    lines.append(
-        f"| Within ±2 Grades | {metrics['within_2_accuracy']:.4f} |"
-    )
-    lines.append(
-        f"| Within ±3 Grades | {metrics['within_3_accuracy']:.4f} |"
-    )
-    lines.append(
-        f"| Within ±4 Grades | {metrics['within_4_accuracy']:.4f} |"
-    )
+    lines.append(f"| Metric | Mean ± Std |")
+    lines.append("|--------|------------|")
+    for metric_name in means:
+        lines.append(f"| {metric_name} | {means[metric_name]:.4f} ± {stds[metric_name]:.4f} |")
     lines.append("")
 
-    lines.append("## Per-Grade Performance")
-    lines.append("| Grade | Precision | Recall | F1 |")
-    lines.append("|-------|-----------|--------|-----|")
-
-    num_actual = len(metrics["per_class_precision"])
-    grade_order = GRADE_ORDER[:num_classes]
-    for i in range(min(num_classes, num_actual)):
-        grade = grade_order[i] if i < len(grade_order) else f"Class {i}"
-        prec = metrics["per_class_precision"][i]
-        rec = metrics["per_class_recall"][i]
-        f1 = metrics["per_class_f1"][i]
-        lines.append(f"| {grade} | {prec:.4f} | {rec:.4f} | {f1:.4f} |")
+    lines.append("## Per-Fold Results")
+    lines.append(results.to_markdown_table())
     lines.append("")
 
     return "\n".join(lines)
 
 
 def main() -> None:
-    """Main entry point for benchmark CLI.
-
-    Loads model, evaluates on test data, computes metrics, writes results.
-    """
     args = parse_args()
     set_seeds(args.seed)
 
@@ -294,165 +179,72 @@ def main() -> None:
         print("Please provide a valid path with --data-path")
         sys.exit(1)
 
-    device = get_device()
+    # Load submission
+    print(f"Loading submission from {args.submission_dir}")
+    train_and_evaluate = load_submission(args.submission_dir)
 
-    # Load and preprocess data FIRST to build vocab
+    # Load and preprocess data
     print(f"Loading data from {data_path}")
     df = load_lstm_data(data_path)
     print(f"Raw data: {len(df)} routes")
 
     sequences = preprocess_lstm_data(df)
     sequences = drop_duplicate_sequences(sequences)
-    print(f"After preprocessing: {len(sequences)} sequences")
+    print(f"After preprocessing: {len(sequences)} unique sequences")
 
-    route_sequences = []
-    route_grades = []
+    route_sequences: list[list[str]] = []
+    route_grades: list[str] = []
     for seq in sequences:
         grade = seq[-2]
         if grade in GRADE_ORDER:
-            route_sequences.append(seq[:-2])
+            route_sequences.append(seq)
             route_grades.append(grade)
 
-    # Encode grades BEFORE split (so split uses encoded labels)
     grade_to_idx = {g: i for i, g in enumerate(GRADE_ORDER)}
     encoded_grades = [grade_to_idx[g] for g in route_grades]
+    num_samples = len(route_sequences)
+    print(f"Valid routes: {num_samples}")
 
-    # Split FIRST (before vocab building to prevent data leakage)
-    train_seqs, test_seqs, train_grades, test_grades = train_test_split(
-        route_sequences, encoded_grades, test_size=0.2, random_state=args.seed,
-        stratify=encoded_grades,
-    )
+    # Run CV
+    n_splits = args.n_splits
+    kfold = KFold(n_splits=n_splits, shuffle=True, random_state=args.seed)
+    fold_results: list[dict[str, float]] = []
 
-    # Build vocabulary from training sequences ONLY (no data leakage)
-    vocab = build_vocab(train_seqs)
-    print(f"Built vocabulary with {len(vocab)} tokens")
+    print(f"\nRunning {n_splits}-fold cross-validation...")
+    all_indices = np.arange(num_samples)
 
-    # Now load model
-    print(f"Loading model from {args.model_path}")
-    model, loaded_vocab, model_config = load_model_and_vocab(args.model_path, device)
-    print(f"Model loaded on device: {device}")
-
-    # Use model's vocab if available, otherwise use built vocab
-    if loaded_vocab:
-        vocab = loaded_vocab
-
-    max_length = model_config["max_length"]
-    num_classes = model_config["num_classes"]
-
-    test_dataset = LSTMSequenceDataset(test_seqs, test_grades, vocab, max_length)
-    test_loader = DataLoader(test_dataset, batch_size=args.batch_size)
-
-    criterion = nn.CrossEntropyLoss()
-
-    mlflow.set_experiment("LSTM Grade Prediction Benchmark")
-
-    with mlflow.start_run() as run:
-        mlflow.log_params(
-            {
-                "model_path": args.model_path,
-                "data_path": data_path,
-                "batch_size": args.batch_size,
-                "seed": args.seed,
-                "max_length": max_length,
-                "num_classes": num_classes,
-                "test_size": len(test_seqs),
-            }
+    for fold_idx, (train_idx, test_idx) in enumerate(kfold.split(all_indices)):
+        print(f"  Fold {fold_idx + 1}/{n_splits}...")
+        metrics = train_and_evaluate(
+            sequences=route_sequences,
+            grades=encoded_grades,
+            train_idx=train_idx,
+            test_idx=test_idx,
+            seed=args.seed,
         )
+        print(f"    Results: {metrics}")
+        fold_results.append(metrics)
 
-        # Run benchmark
-        print("\nRunning benchmark evaluation...")
-        model.eval()
-        all_preds = []
-        all_labels = []
-        total_loss = 0.0
+    results = BenchmarkResults(fold_results=fold_results)
+    print(f"\nMean scores: {results.mean_scores()}")
+    print(f"Std scores:  {results.std_scores()}")
 
-        with torch.no_grad():
-            for sequences_batch, grades_batch in test_loader:
-                sequences_batch = sequences_batch.to(device)
-                grades_batch = grades_batch.to(device)
-                outputs = model(sequences_batch)
-                loss = criterion(outputs, grades_batch)
-                total_loss += loss.item()
-                _, predicted = torch.max(outputs, 1)
-                all_preds.extend(predicted.cpu().numpy().tolist())
-                all_labels.extend(grades_batch.cpu().numpy().tolist())
+    # Write JSON output
+    output_json = Path(args.output_json)
+    output_json.parent.mkdir(parents=True, exist_ok=True)
+    json_str = results.to_json()
+    output_json.write_text(json_str)
+    print(f"JSON results written to {output_json}")
 
-        avg_loss = total_loss / len(test_loader)
-        metrics = evaluate_classification(all_labels, all_preds, num_classes)
+    # Write Markdown output
+    output_markdown = Path(args.output_markdown)
+    output_markdown.parent.mkdir(parents=True, exist_ok=True)
+    markdown = generate_markdown_report(results, args.submission_dir, data_path, n_splits)
+    output_markdown.write_text(markdown)
+    print(f"Markdown report written to {output_markdown}")
 
-        # Build results
-        results = {
-            "loss": float(avg_loss),
-            "metrics": {
-                "test_loss": float(avg_loss),
-                "exact_accuracy": float(metrics["exact_accuracy"]),
-                "within_1_accuracy": float(metrics["within_1_accuracy"]),
-                "within_2_accuracy": float(metrics["within_2_accuracy"]),
-                "within_3_accuracy": float(metrics["within_3_accuracy"]),
-                "within_4_accuracy": float(metrics["within_4_accuracy"]),
-                "per_class_precision": [float(x) for x in metrics["per_class_precision"]],
-                "per_class_recall": [float(x) for x in metrics["per_class_recall"]],
-                "per_class_f1": [float(x) for x in metrics["per_class_f1"]],
-                "confusion_matrix": metrics["confusion_matrix"].tolist(),
-            },
-            "summary": {
-                "test_loss": float(avg_loss),
-                "exact_accuracy": float(metrics["exact_accuracy"]),
-                "within_1_accuracy": float(metrics["within_1_accuracy"]),
-                "within_2_accuracy": float(metrics["within_2_accuracy"]),
-                "within_3_accuracy": float(metrics["within_3_accuracy"]),
-                "within_4_accuracy": float(metrics["within_4_accuracy"]),
-            },
-        }
-
-        # Write JSON results
-        output_json = Path(args.output_json)
-        output_json.parent.mkdir(parents=True, exist_ok=True)
-        with open(output_json, "w") as f:
-            json.dump(results, f, indent=2)
-        print(f"✓ JSON results written to {output_json}")
-        mlflow.log_artifact(str(output_json))
-
-        # Write Markdown results
-        output_markdown = Path(args.output_markdown)
-        output_markdown.parent.mkdir(parents=True, exist_ok=True)
-        markdown_report = generate_markdown_report(
-            results, args.model_path, data_path, metrics, num_classes
-        )
-        with open(output_markdown, "w") as f:
-            f.write(markdown_report)
-        print(f"✓ Markdown report written to {output_markdown}")
-        mlflow.log_artifact(str(output_markdown))
-
-        # Log metrics to MLflow
-        mlflow.log_metrics(
-            {
-                "test_loss": avg_loss,
-                "exact_accuracy": metrics["exact_accuracy"],
-                "within_1_accuracy": metrics["within_1_accuracy"],
-                "within_2_accuracy": metrics["within_2_accuracy"],
-                "within_3_accuracy": metrics["within_3_accuracy"],
-                "within_4_accuracy": metrics["within_4_accuracy"],
-            }
-        )
-
-        num_actual = len(metrics["per_class_precision"])
-        for i, grade in enumerate(GRADE_ORDER[:num_classes]):
-            if i >= num_actual:
-                break
-            safe_grade = grade.replace("+", "").replace("/", "")
-            mlflow.log_metrics(
-                {
-                    f"grade_{safe_grade}_precision": metrics["per_class_precision"][i],
-                    f"grade_{safe_grade}_recall": metrics["per_class_recall"][i],
-                    f"grade_{safe_grade}_f1": metrics["per_class_f1"][i],
-                }
-            )
-
-        # Print leaderboard summary to stdout
-        print(format_leaderboard_summary(metrics, GRADE_ORDER[:num_classes]))
-
-        print(f"\nRun ID: {run.info.run_id}")
+    # Print leaderboard to console
+    print(format_leaderboard_summary(results))
 
 
 if __name__ == "__main__":

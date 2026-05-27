@@ -3,6 +3,8 @@
 Trains a 3-layer LSTM classifier on Moonboard route sequences and evaluates
 using exact, within-1, and within-2 grade accuracy metrics.
 
+Exposes train_and_evaluate() for use by the benchmark harness.
+
 Usage:
     uv run python submissions/lstm-baseline/main.py --help
     uv run python submissions/lstm-baseline/main.py --data-path Raw/moonboard_problems_setup_2016.json
@@ -12,6 +14,7 @@ import argparse
 import sys
 from pathlib import Path
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -94,7 +97,6 @@ def parse_args() -> argparse.Namespace:
 
 
 def build_vocab(sequences: list[list[str]]) -> dict[str, int]:
-    """Build token vocabulary from route sequences (0 reserved for padding)."""
     tokens: set[str] = set()
     for seq in sequences:
         tokens.update(seq)
@@ -103,11 +105,98 @@ def build_vocab(sequences: list[list[str]]) -> dict[str, int]:
     return vocab
 
 
+def train_and_evaluate(
+    sequences: list[list[str]],
+    grades: list[int],
+    train_idx: np.ndarray,
+    test_idx: np.ndarray,
+    seed: int = 42,
+    embed_dim: int = 16,
+    hidden_dim: int = 128,
+    num_layers: int = 3,
+    epochs: int = 500,
+    batch_size: int = 32,
+    learning_rate: float = 0.001,
+) -> dict[str, float]:
+    """Train a fresh LSTM on the training fold and evaluate on test fold.
+
+    Args:
+        sequences: Preprocessed route sequences (list of token lists) that
+            include grade at position -2 and GRADE_END at position -1.
+        grades: Encoded grade labels (parallel to sequences).
+        train_idx: Indices for the training fold.
+        test_idx: Indices for the test fold.
+        seed: Random seed for reproducibility.
+
+    Returns:
+        Dict with exact_accuracy, within_one_grade, within_two_grades.
+    """
+    set_seeds(seed)
+
+    train_seqs_full = [sequences[i] for i in train_idx]
+    test_seqs_full = [sequences[i] for i in test_idx]
+    train_grades = [grades[i] for i in train_idx]
+    test_grades = [grades[i] for i in test_idx]
+
+    train_seqs = [s[:-2] for s in train_seqs_full]
+    test_seqs = [s[:-2] for s in test_seqs_full]
+
+    vocab = build_vocab(train_seqs)
+    max_length = max(len(s) for s in train_seqs) if train_seqs else 1
+    num_classes = len(GRADE_ORDER)
+    vocab_size = len(vocab)
+
+    train_ds = LSTMSequenceDataset(train_seqs, train_grades, vocab, max_length)
+    test_ds = LSTMSequenceDataset(test_seqs, test_grades, vocab, max_length)
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test_ds, batch_size=batch_size)
+
+    device = get_device()
+    model = ClimbingGradePredictor(
+        vocab_size=vocab_size,
+        embed_dim=embed_dim,
+        hidden_dim=hidden_dim,
+        num_layers=num_layers,
+        num_classes=num_classes,
+    ).to(device)
+
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode="min", factor=0.5, patience=20
+    )
+
+    best_test_loss = float("inf")
+    for epoch in range(epochs):
+        train_lstm_epoch(model, train_loader, criterion, optimizer, device)
+        test_loss, test_acc = evaluate_lstm(model, test_loader, criterion, device)
+        scheduler.step(test_loss)
+        if test_loss < best_test_loss:
+            best_test_loss = test_loss
+
+    all_preds: list[int] = []
+    all_labels: list[int] = []
+    model.eval()
+    with torch.no_grad():
+        for seqs, lbls in test_loader:
+            seqs, lbls = seqs.to(device), lbls.to(device)
+            outputs = model(seqs)
+            _, predicted = torch.max(outputs, 1)
+            all_preds.extend(predicted.cpu().numpy().tolist())
+            all_labels.extend(lbls.cpu().numpy().tolist())
+
+    metrics = evaluate_classification(all_labels, all_preds, num_classes)
+    return {
+        "exact_accuracy": metrics["exact_accuracy"],
+        "within_one_grade": metrics["within_1_accuracy"],
+        "within_two_grades": metrics["within_2_accuracy"],
+    }
+
+
 def main() -> None:
     args = parse_args()
     set_seeds(args.seed)
 
-    # -- Resolve paths --
     data_path = args.data_path
     if not Path(data_path).exists():
         print(f"Error: Data file not found at '{data_path}'")
@@ -117,18 +206,17 @@ def main() -> None:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # -- Load & preprocess --
     print(f"Loading data from {data_path}")
     df = load_lstm_data(data_path)
     print(f"Raw data: {len(df)} routes")
 
-    sequences = preprocess_lstm_data(df)
-    sequences = drop_duplicate_sequences(sequences)
-    print(f"After preprocessing: {len(sequences)} unique sequences")
+    all_sequences = preprocess_lstm_data(df)
+    all_sequences = drop_duplicate_sequences(all_sequences)
+    print(f"After preprocessing: {len(all_sequences)} unique sequences")
 
     route_sequences: list[list[str]] = []
     route_grades: list[str] = []
-    for seq in sequences:
+    for seq in all_sequences:
         grade = seq[-2]
         if grade in GRADE_ORDER:
             route_sequences.append(seq[:-2])
@@ -146,7 +234,6 @@ def main() -> None:
     print(f"Max sequence length: {max_length}")
     print(f"Number of classes: {num_classes}")
 
-    # -- Train/test split --
     train_seqs, test_seqs, train_grades, test_grades = train_test_split(
         route_sequences,
         encoded_grades,
@@ -161,7 +248,6 @@ def main() -> None:
     train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True)
     test_loader = DataLoader(test_ds, batch_size=args.batch_size)
 
-    # -- Build model --
     device = get_device()
     print(f"Training on device: {device}")
 
@@ -179,7 +265,6 @@ def main() -> None:
         optimizer, mode="min", factor=0.5, patience=20
     )
 
-    # -- Training loop --
     best_test_loss = float("inf")
     for epoch in range(args.epochs):
         train_loss = train_lstm_epoch(model, train_loader, criterion, optimizer, device)
@@ -195,17 +280,16 @@ def main() -> None:
         if test_loss < best_test_loss:
             best_test_loss = test_loss
 
-    # -- Final evaluation --
     all_preds: list[int] = []
     all_labels: list[int] = []
     model.eval()
     with torch.no_grad():
-        for seqs, grades in test_loader:
-            seqs, grades = seqs.to(device), grades.to(device)
+        for seqs, lbls in test_loader:
+            seqs, lbls = seqs.to(device), lbls.to(device)
             outputs = model(seqs)
             _, predicted = torch.max(outputs, 1)
             all_preds.extend(predicted.cpu().numpy().tolist())
-            all_labels.extend(grades.cpu().numpy().tolist())
+            all_labels.extend(lbls.cpu().numpy().tolist())
 
     metrics = evaluate_classification(all_labels, all_preds, num_classes)
 
@@ -217,7 +301,6 @@ def main() -> None:
     print(f"Within-1 Accuracy:   {metrics['within_1_accuracy']:.4f}")
     print(f"Within-2 Accuracy:   {metrics['within_2_accuracy']:.4f}")
 
-    # -- Save model --
     save_path = output_dir / "LSTM_Moonboard.pth"
     torch.save(
         {
