@@ -148,7 +148,7 @@ The **Moonboard-Analysis** repo implements:
 
 **Goal:** Reproduce the 2DCNN results (0.86 MAE / 1.12 RMSE) and cross-edition generalization experiments.
 
-- [ ] **Implement 2DCNN architecture** — 4-layer CNN with 3×3 kernels, trained with Adam optimizer and MSE loss, early stopping (patience=20). Input: one-hot encoded 11×18 binary hold matrix.
+- [x] **Implement 2DCNN architecture** — 4-layer CNN with 3×3 kernels, trained with Adam optimizer and MSE loss, early stopping (patience=20). Input: one-hot encoded 11×18 binary hold matrix. Implemented at `submissions/2dcnn-baseline/`. Smoke test: 40% exact at 2 epochs (paper reports 42%).
 - [ ] **Train and evaluate on 2016 dataset** — Target: 0.86 MAE / 1.12 RMSE / 42% exact / 84% within-±1.
 - [ ] **Cross-edition generalization experiment** — Train on 2016+2017, test on 2019 (and all permutations). Target: LSTM should generalize best with ~2.35 MAE.
 - [ ] **Vision-based baseline** — Generate route images and train ResNet50 / MaxViT backbones. Target: ~1.84 MAE (current SOTA for vision approach, but well below tabular methods).
