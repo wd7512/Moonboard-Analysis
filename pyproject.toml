@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "moonboard-analysis"
 version = "0.1.0"
-description = "Moonboard climbing route analysis with autoencoders and LSTM grade prediction"
+description = "Moonboard Analysis & Machine Learning (ML) Benchmark for route compression and grade prediction"
 requires-python = ">=3.11"
 dependencies = [
     "numpy>=1.24,<2",

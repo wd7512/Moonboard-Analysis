@@ -1,6 +1,6 @@
-# Moonboard Analysis
+# Moonboard Analysis & Machine Learning (ML) Benchmark
 
-Machine learning analysis of Moonboard climbing route data — route compression via autoencoders and grade classification via LSTMs, MLPs, Random Forests, and 2D CNNs.
+A comprehensive machine learning (ML) analysis and benchmark of Moonboard climbing route data — route compression via autoencoders and a standardized Moonboard ML benchmark for grade classification via LSTMs, MLPs, Random Forests, and 2D CNNs.
 
 ## Project Structure
 
@@ -42,11 +42,9 @@ Key results (autoencoder vs PCA at 5% bottleneck):
 | Binary Accuracy | 97.6% | 95.1% |
 | Exact Match | 2.8% | 0.06% |
 
-### Grade Classification Benchmark
+### Moonboard ML Grade Classification Benchmark
 
-Predicts route grade (6B+ through 8A) from hold configurations using a
-retrain-per-fold 5-fold cross-validation framework. Each fold trains a
-fresh model from scratch.
+This module provides a standardized **Moonboard ML benchmark** to predict route grades (6B+ through 8A) from hold configurations using a retrain-per-fold 5-fold cross-validation framework. Each fold trains a fresh model from scratch.
 
 #### Usage
 
