@@ -193,10 +193,10 @@ The **Moonboard-Analysis** repo implements:
 | Petashvili & Rodda (2023) | 2DCNN | 42% | 84% | 0.86 | 1.12 |
 | Petashvili & Rodda (2023) | LSTM | — | — | ~0.95 | ~1.20 |
 | Petashvili & Rodda (2023) | ResNet50 (vision) | — | — | 1.84 | 2.30 |
-|| **This repo** | **Random Forest** | **49.55%** | **69.65%** | — | — |
-|| **This repo** | **Perceptron (MLP)** | **45.26%** | **45.26%** | — | — |
-|| **This repo** | **LSTM** | **35.46%** | **35.46%** | — | — |
-|| **This repo** | **2DCNN** | **27.23%** | **27.23%** | — | — |
-|| **This repo** | **Ridge Regression** | **20.39%** | **55.60%** | — | — |
+| **This repo** | **Random Forest** | **49.55%** | **69.65%** | — | — |
+| **This repo** | **Perceptron (MLP)** | **45.26%** | **45.26%** | — | — |
+| **This repo** | **LSTM** | **35.46%** | **35.46%** | — | — |
+| **This repo** | **2DCNN** | **27.23%** | **27.23%** | — | — |
+| **This repo** | **Ridge Regression** | **20.39%** | **55.60%** | — | — |
 
-> **Note:** All this-repo results from 5-fold retrain-per-fold CV (10K stratified subsample, 2016 data). Ridge is from a 2-fold smoke test (2K samples). The previous 96.43% RF result was caused by data leakage and has been corrected.
+> **Note:** All this-repo results from 5-fold retrain-per-fold CV (10K stratified subsample of 2016 data). The previous 96.43% RF result was caused by data leakage and has been corrected.
