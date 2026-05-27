@@ -261,6 +261,13 @@ class BenchmarkHarness:
         Raises:
             ValueError: If n_splits is not in range [1, 10].
         """
+        # Validate inputs
+        if len(features) != len(labels):
+            raise ValueError(
+                f"Features and labels must have the same length, "
+                f"got {len(features)} and {len(labels)}"
+            )
+
         # Validate n_splits
         if not isinstance(n_splits, int):
             raise TypeError(f"n_splits must be an integer, got {type(n_splits).__name__}")

@@ -374,3 +374,17 @@ class TestBenchmarkHarness:
             within_one = fold_result["within_one_grade"]
             within_two = fold_result["within_two_grades"]
             assert exact <= within_one <= within_two
+
+    def test_mismatched_features_labels_raises_error(
+        self,
+        mock_lstm_classifier: nn.Module,
+        mock_benchmark_data: tuple[np.ndarray, np.ndarray],
+    ) -> None:
+        """Verify mismatched features/labels lengths raise ValueError."""
+        features, _ = mock_benchmark_data
+        wrong_labels = np.array([0, 1, 2])  # Only 3 labels vs 1000 features
+        metrics = [ExactAccuracy()]
+        harness = BenchmarkHarness(model=mock_lstm_classifier, metrics=metrics)
+
+        with pytest.raises(ValueError, match="Features and labels must have the same length"):
+            harness.run_benchmark(features, wrong_labels, n_splits=3)

@@ -59,7 +59,7 @@ def load_model_and_vocab(
         print("Train a model first with moonboard-train-lstm")
         sys.exit(1)
 
-    checkpoint = torch.load(model_path, map_location=device, weights_only=False)
+    checkpoint = torch.load(model_path, map_location=device, weights_only=True)
 
     # Handle both new and old checkpoint formats
     if "config" in checkpoint:
@@ -80,7 +80,8 @@ def load_model_and_vocab(
         embed_dim = state_dict["embedding.weight"].shape[1]
         # lstm layer hidden size is the second dimension of lstm.weight_ih_l0
         hidden_dim = state_dict["lstm.weight_ih_l0"].shape[0] // 4  # 4 gates in LSTM
-        num_layers = max(int(k.split("_l")[-1]) for k in state_dict if "lstm.weight_ih_l" in k) + 1
+        layer_keys = [k for k in state_dict if "lstm.weight_ih_l" in k]
+        num_layers = max((int(k.split("_l")[-1]) for k in layer_keys), default=0) + 1
         num_classes = state_dict["fc.bias"].shape[0]
 
         config = {
@@ -143,7 +144,8 @@ def main() -> None:
 
     max_length = 50
     train_seqs, test_seqs, train_grades, test_grades = train_test_split(
-        route_sequences, encoded_grades, test_size=0.2, random_state=args.seed
+        route_sequences, encoded_grades, test_size=0.2, random_state=args.seed,
+        stratify=encoded_grades,
     )
 
     # Build vocab from training sequences (before loading model)
