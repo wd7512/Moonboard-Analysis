@@ -1,6 +1,6 @@
 # Moonboard Analysis
 
-Machine learning analysis of Moonboard climbing route data — route compression via autoencoders and grade classification via LSTMs.
+Machine learning analysis of Moonboard climbing route data — route compression via autoencoders and grade classification via LSTMs, MLPs, Random Forests, and 2D CNNs.
 
 ## Project Structure
 
@@ -9,23 +9,15 @@ src/moonboard_analysis/     # Core Python package
   config.py                 # Hyperparameter dataclasses
   data/                     # Data loading, preprocessing, PyTorch datasets
   models/                   # Autoencoder, LSTM, PCA wrapper
-  training/                 # Training loops, evaluation metrics
+  training/                 # Training loops, evaluation metrics, benchmark harness
   utils/                    # Reproducibility seeding, path helpers
 notebooks/                  # Jupyter notebooks for exploration
 archive/Legacy/             # Previous analysis notebooks (archived)
 Raw/                        # Raw Moonboard API JSON data
-scripts/                    # Entry-point scripts
+submissions/                # Model submissions for cross-validation benchmarking
 ```
 
 ## Installation
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-```
-
-Or with [uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv sync
@@ -50,110 +42,63 @@ Key results (autoencoder vs PCA at 5% bottleneck):
 | Binary Accuracy | 97.6% | 95.1% |
 | Exact Match | 2.8% | 0.06% |
 
-### LSTM Grade Classification
+### Grade Classification Benchmark
 
-Predicts route grade (6B+ through 8A) from the ordered sequence of holds
-using a 3-layer LSTM with class-weighted loss.
+Predicts route grade (6B+ through 8A) from hold configurations using a
+retrain-per-fold 5-fold cross-validation framework. Each fold trains a
+fresh model from scratch.
 
-```bash
-moonboard-train-lstm
-moonboard-evaluate-lstm
-```
-
-Current results (saved checkpoint, evaluation only):
-| Tolerance | Accuracy |
-|-----------|----------|
-| Exact | 11.5% |
-| Within ±1 Grade | 11.5% |
-| Within ±2 Grades | 27.5% |
-| Within ±3 Grades | 51.9% |
-| Within ±4 Grades | 63.4% |
-
-> **Note:** The saved `LSTM_Moonboard.pth` checkpoint is from an incomplete training run.
-> Run `moonboard-train-lstm` to train a proper model, then re-evaluate.
-
-## Benchmark
-
-We evaluate grade classification performance using an 80/20 train-test split
-on the Moonboard dataset by default. 80% of routes are used for training and
-20% for evaluation, with stratified sampling to preserve grade distribution.
-
-**Note for researchers:** The `BenchmarkHarness` class in `training/benchmark.py`
-supports n-fold cross-validation for more rigorous evaluation. The CLI script
-uses a simple 80/20 split for faster inference.
-
-### Metrics
-
-We report three tolerance-based metrics:
-
-- **Exact Match**: Predicted grade matches true grade exactly
-- **Within ±1 Grade**: Predicted grade within one step of true grade
-  (e.g., 7A+ for true 7A is acceptable)
-- **Within ±2 Grades**: Predicted grade within two steps of true grade
-  (e.g., 7B for true 7A is acceptable)
-
-Grade hierarchy: 6B+, 6C, 6C+, 7A, 7A+, 7B, 7B+, 7C, 7C+, 8A, 8A+, ...
-
-See `submissions/` for model submission format and the LSTM baseline reference.
-
-### Leaderboard
-
-| Model             | Exact (%) | Within ±1 (%) | Within ±2 (%) |
-|-------------------|-----------|---------------|---------------|
-| Random Forest     | 96.27     | 97.50         | 98.57         |
-| Perceptron (MLP)  | 72.72     | 72.72         | 89.60         |
-| LSTM Baseline     | 11.5      | 11.5          | 27.5          |
-| *LSTM (retraining)* | *TBD*   | *TBD*         | *TBD*         |
-
-> Submit a PR to claim the leaderboard with your trained model!
-> The LSTM baseline is being retrained with class-weighted loss and stratified split — results TBD.
-
-The baselines use:
-- 16-dim embeddings for 164 hold types
-- 128-dim hidden state
-- Class-weighted cross-entropy loss to handle grade imbalance
-- Trained for 500 epochs with Adam optimizer (lr=0.001)
-
-### Usage
-
-Run the benchmark on a new model:
+#### Usage
 
 ```bash
-moonboard-evaluate-lstm --model-path path/to/model.pth --seed 42
+# Run 5-fold CV benchmark on a submission
+moonboard-benchmark --submission-dir submissions/lstm-baseline
+
+# Use a subset for faster iteration
+moonboard-benchmark --submission-dir submissions/tree-baseline --max-samples 10000
+
+# Use a different data source
+moonboard-benchmark --submission-dir submissions/2dcnn-baseline --data-path Raw/moonboard_problems_setup_master2017.json
 ```
 
-For help and more options:
+#### Leaderboard (5-fold CV, 2016 dataset)
 
-```bash
-moonboard-evaluate-lstm --help
+| Model | Exact (%) | Within ±1 (%) | Within ±2 (%) |
+|-------|-----------|---------------|---------------|
+| Random Forest | **49.55** (±0.4) | **69.65** (±0.9) | **82.88** (±0.7) |
+| Perceptron (MLP) | **45.26** (±0.7) | 45.26 (±0.7) | 70.89 (±1.0) |
+| LSTM | **35.46** (±1.9) | 35.46 (±1.9) | 66.31 (±1.0) |
+| 2DCNN | **27.23** (±5.3) | 27.23 (±5.3) | 55.62 (±8.7) |
+
+Results are mean ± std across 5 stratified folds on 10K sampled routes from the 2016 dataset (25K raw / 92K preprocessed). All submissions train with early stopping (patience=10, max 50 epochs).
+
+#### Submissions
+
+New models go in `submissions/<model-name>/main.py` and must expose a `train_and_evaluate()` function. See existing submissions for the interface:
+
+```python
+def train_and_evaluate(
+    sequences: list[list[str]],
+    grades: list[int],
+    train_idx: np.ndarray,
+    test_idx: np.ndarray,
+    seed: int = 42,
+    **kwargs,
+) -> dict[str, float]:
+    ...
 ```
-
-Example output shows exact and within-tolerance accuracies:
-
-```
-==================================================
-Evaluation Results
-==================================================
-Test Loss: 0.5234
-Exact Accuracy: 0.8220
-Within-1 Accuracy: 0.9040
-Within-2 Accuracy: 0.9550
-```
-
-### Contributing
-
-**Want to beat our baseline?** We welcome new model architectures,
-feature engineering, or training techniques. Submit a PR with:
-
-1. Updated model code in `src/moonboard_analysis/models/`
-2. Evaluation results using the same benchmark setup
-3. A brief description of your approach
-
-We'll update the leaderboard with top-performing models!
 
 ## Reproducibility
 
 - All random seeds are set explicitly (`utils/reproducibility.py`)
 - Dependencies are pinned with version ranges in `pyproject.toml`
 - MLflow tracks every run's hyperparameters and metrics
-- Saved model weights: `Autoencoder_Moonboard.pth`, `LSTM_Moonboard.pth`
+- Model weights are not committed (code-only submission policy)
+
+## Related Work
+
+See [`docs/research-overview.md`](docs/research-overview.md) for a summary of existing Moonboard grade prediction papers and a reproduction roadmap.
+
+## License
+
+MIT

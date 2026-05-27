@@ -65,6 +65,12 @@ def parse_args() -> argparse.Namespace:
         help="Number of CV folds (default: 5)",
     )
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
+    parser.add_argument(
+        "--max-samples",
+        type=int,
+        default=None,
+        help="Maximum number of samples to use (default: all)",
+    )
     return parser.parse_args()
 
 
@@ -204,6 +210,32 @@ def main() -> None:
     encoded_grades = [grade_to_idx[g] for g in route_grades]
     num_samples = len(route_sequences)
     print(f"Valid routes: {num_samples}")
+
+    # Optionally cap samples for faster benchmarking
+    if args.max_samples is not None and args.max_samples < num_samples:
+        # Sample with stratification by grade to maintain class distribution
+        from collections import defaultdict
+        grade_indices = defaultdict(list)
+        for i, g in enumerate(encoded_grades):
+            grade_indices[g].append(i)
+        
+        # Sample proportionally from each grade
+        np.random.seed(args.seed)
+        sampled_indices = []
+        samples_per_grade = args.max_samples // len(GRADE_ORDER)
+        for grade_idx in range(len(GRADE_ORDER)):
+            indices = grade_indices[grade_idx]
+            if len(indices) >= samples_per_grade:
+                sampled = np.random.choice(indices, samples_per_grade, replace=False)
+            else:
+                sampled = np.array(indices)
+            sampled_indices.extend(sampled)
+        
+        np.random.shuffle(sampled_indices)
+        route_sequences = [route_sequences[i] for i in sampled_indices]
+        encoded_grades = [encoded_grades[i] for i in sampled_indices]
+        num_samples = len(route_sequences)
+        print(f"Capped to: {num_samples} samples (stratified)")
 
     # Run CV
     n_splits = args.n_splits

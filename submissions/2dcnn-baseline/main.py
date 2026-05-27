@@ -63,8 +63,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--epochs",
         type=int,
-        default=100,
-        help="Number of training epochs (default: 100)",
+        default=50,
+        help="Number of training epochs (default: 50)",
     )
     parser.add_argument(
         "--batch-size",

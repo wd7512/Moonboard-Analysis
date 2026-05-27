@@ -180,3 +180,9 @@ mlruns/
 
 # Ruff
 .ruff_cache/
+results_*.json
+results_*.md
+
+# Model weights (code-only submission policy)
+*.pth
+*.joblib
