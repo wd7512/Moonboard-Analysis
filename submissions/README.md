@@ -87,3 +87,5 @@ uv run python submissions/<model-name>/main.py [ARGS]
   point for feed-forward architectures.
 - **`tree-baseline/`** — Random Forest classifier on 164-dim feature vectors.
   Demonstrates non-PyTorch submissions.
+- **`ridge-baseline/`** — Ridge regression on 164-dim binary hold vectors.
+  Simple linear baseline; predicts grade index via rounded regression output.

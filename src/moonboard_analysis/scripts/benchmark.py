@@ -12,7 +12,6 @@ Usage:
 
 import argparse
 import importlib.util
-import json
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -161,7 +160,7 @@ def generate_markdown_report(
     lines.append("")
 
     lines.append("## Overall Metrics")
-    lines.append(f"| Metric | Mean ± Std |")
+    lines.append("| Metric | Mean ± Std |")
     lines.append("|--------|------------|")
     for metric_name in means:
         lines.append(f"| {metric_name} | {means[metric_name]:.4f} ± {stds[metric_name]:.4f} |")
@@ -218,7 +217,7 @@ def main() -> None:
         grade_indices = defaultdict(list)
         for i, g in enumerate(encoded_grades):
             grade_indices[g].append(i)
-        
+
         # Sample proportionally from each grade
         np.random.seed(args.seed)
         sampled_indices = []
@@ -230,7 +229,7 @@ def main() -> None:
             else:
                 sampled = np.array(indices)
             sampled_indices.extend(sampled)
-        
+
         np.random.shuffle(sampled_indices)
         route_sequences = [route_sequences[i] for i in sampled_indices]
         encoded_grades = [encoded_grades[i] for i in sampled_indices]

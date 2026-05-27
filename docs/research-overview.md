@@ -123,11 +123,13 @@ The **Moonboard-Analysis** repo implements:
 
 | Model | Exact (%) | Within ±1 (%) | Within ±2 (%) |
 |-------|-----------|---------------|---------------|
-| Random Forest | 96.43 | 97.67 | 98.62 |
-| Perceptron (MLP) | *TBD* | *TBD* | *TBD* |
-| LSTM Baseline | *TBD* | *TBD* | *TBD* |
+| Random Forest | 49.55 | 69.65 | 82.88 |
+| Perceptron (MLP) | 45.26 | 45.26 | 70.89 |
+| LSTM Baseline | 35.46 | 35.46 | 66.31 |
+| 2DCNN | 27.23 | 27.23 | 55.62 |
+| Ridge Regression | 18.07 | 50.36 | 77.11 |
 
-> **Note:** Random Forest results are from the 5-fold retrain-per-fold CV benchmark. MLP and LSTM results are pending completion of their 5-fold CV benchmarks. Previous single-split results showed LSTM at 11.5% exact (incomplete training run).
+> **Note:** All results are from the 5-fold retrain-per-fold CV benchmark (10K stratified subsample of 2016 data). The previous 96.43% RF result was caused by data leakage (multiple variants of the same route in both train and test folds) and has been corrected. Ridge results are from a 2-fold smoke test (2K samples).
 
 ---
 
@@ -137,7 +139,7 @@ The **Moonboard-Analysis** repo implements:
 
 **Goal:** Reproduce the ~46.7% exact / ~84.7% within-±1 results from the GradeNet paper.
 
-- [x] **Train the LSTM baseline to completion** — Now running with 5-fold retrain-per-fold CV benchmark. Config: 16-dim embeddings, 128-dim hidden, 3 layers, Adam lr=0.001, class-weighted loss. Results pending.
+- [x] **Train the LSTM baseline to completion** — Done. 5-fold retrain-per-fold CV: 35.46% exact, 66.31% within-±2. Config: 16-dim embeddings, 128-dim hidden, 3 layers, Adam lr=0.001, early stopping (patience=10).
 - [ ] **Verify BetaMove preprocessing equivalence** — Compare the repo's `preprocessing.py` tokenization against the BetaMove pipeline described in the paper. The repo uses sorted hold descriptions with special tokens (`START_END`, `MIDDLE_END`, etc.) which appears to be a variant of the same concept.
 - [ ] **Evaluate with the same metrics** — Report exact match and within-±1 grade accuracy on a held-out test set with the same grade distribution as the paper.
 - [ ] **Compare against reported human baseline** — The paper estimates human-level performance at ~45% exact / ~85% within-±1. Verify whether the trained model approaches this.
@@ -149,6 +151,7 @@ The **Moonboard-Analysis** repo implements:
 **Goal:** Reproduce the 2DCNN results (0.86 MAE / 1.12 RMSE) and cross-edition generalization experiments.
 
 - [x] **Implement 2DCNN architecture** — 4-layer CNN with 3×3 kernels, trained with Adam optimizer and MSE loss, early stopping (patience=20). Input: one-hot encoded 11×18 binary hold matrix. Implemented at `submissions/2dcnn-baseline/`. Smoke test: 40% exact at 2 epochs (paper reports 42%).
+- [x] **Implement Ridge regression baseline** — Simple linear baseline on 164-dim binary hold vectors. Implemented at `submissions/ridge-baseline/`. Smoke test (2-fold, 2K samples): ~18% exact.
 - [ ] **Train and evaluate on 2016 dataset** — Target: 0.86 MAE / 1.12 RMSE / 42% exact / 84% within-±1.
 - [ ] **Cross-edition generalization experiment** — Train on 2016+2017, test on 2019 (and all permutations). Target: LSTM should generalize best with ~2.35 MAE.
 - [ ] **Vision-based baseline** — Generate route images and train ResNet50 / MaxViT backbones. Target: ~1.84 MAE (current SOTA for vision approach, but well below tabular methods).
@@ -190,8 +193,10 @@ The **Moonboard-Analysis** repo implements:
 | Petashvili & Rodda (2023) | 2DCNN | 42% | 84% | 0.86 | 1.12 |
 | Petashvili & Rodda (2023) | LSTM | — | — | ~0.95 | ~1.20 |
 | Petashvili & Rodda (2023) | ResNet50 (vision) | — | — | 1.84 | 2.30 |
-| **This repo** | **Random Forest** | **96.43%** | **97.67%** | — | — |
-| **This repo** | **Perceptron (MLP)** | ***TBD*** | ***TBD*** | — | — |
-| **This repo** | **LSTM** | ***TBD*** | ***TBD*** | — | — |
+|| **This repo** | **Random Forest** | **49.55%** | **69.65%** | — | — |
+|| **This repo** | **Perceptron (MLP)** | **45.26%** | **45.26%** | — | — |
+|| **This repo** | **LSTM** | **35.46%** | **35.46%** | — | — |
+|| **This repo** | **2DCNN** | **27.23%** | **27.23%** | — | — |
+|| **This repo** | **Ridge Regression** | **~18%** | **~50%** | — | — |
 
-> **Note:** This repo's Random Forest result (96.43% exact) significantly exceeds all published results. This may reflect differences in evaluation setup, grade filtering, or dataset size. MLP and LSTM results are pending.
+> **Note:** All this-repo results from 5-fold retrain-per-fold CV (10K stratified subsample, 2016 data). Ridge is from a 2-fold smoke test (2K samples). The previous 96.43% RF result was caused by data leakage and has been corrected.

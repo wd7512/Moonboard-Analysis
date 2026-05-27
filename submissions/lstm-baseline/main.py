@@ -7,7 +7,8 @@ Exposes train_and_evaluate() for use by the benchmark harness.
 
 Usage:
     uv run python submissions/lstm-baseline/main.py --help
-    uv run python submissions/lstm-baseline/main.py --data-path Raw/moonboard_problems_setup_2016.json
+    uv run python submissions/lstm-baseline/main.py \\
+        --data-path Raw/moonboard_problems_setup_2016.json
 """
 
 import argparse
