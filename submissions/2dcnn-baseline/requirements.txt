@@ -1,0 +1,1 @@
+# All dependencies are inherited from the project's pyproject.toml

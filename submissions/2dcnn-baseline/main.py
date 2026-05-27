@@ -1,14 +1,16 @@
-"""submissions/perceptron-baseline — MLP (perceptron) grade predictor baseline.
+"""submissions/2dcnn-baseline — 2D CNN grade predictor reference submission.
 
-Trains a 3-layer MLP classifier on Moonboard route data. Each route is
-flattened to a fixed-size binary hold vector, then passed through fully
-connected layers to predict the climbing grade.
+Trains a 4-layer 2D CNN classifier on Moonboard route binary hold matrices
+and evaluates using exact, within-1, and within-2 grade accuracy metrics.
+
+Architecture follows Petashvili & Rodda (2023): 4 conv layers with 3×3
+kernels, batch norm, ReLU, then fully connected layers.
 
 Exposes train_and_evaluate() for use by the benchmark harness.
 
 Usage:
-    uv run python submissions/perceptron-baseline/main.py --help
-    uv run python submissions/perceptron-baseline/main.py --data-path Raw/moonboard_problems_setup_2016.json
+    uv run python submissions/2dcnn-baseline/main.py --help
+    uv run python submissions/2dcnn-baseline/main.py --data-path Raw/moonboard_problems_setup_2016.json
 """
 
 import argparse
@@ -34,12 +36,11 @@ from moonboard_analysis.utils.reproducibility import set_seeds
 
 NUM_COLS = 11
 NUM_ROWS = 18
-HOLD_VECTOR_DIM = NUM_COLS * NUM_ROWS
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Perceptron (MLP) baseline — train and evaluate on Moonboard data"
+        description="2D CNN baseline — train and evaluate on Moonboard data"
     )
     parser.add_argument(
         "--data-path",
@@ -60,22 +61,10 @@ def parse_args() -> argparse.Namespace:
         help="Random seed for reproducibility (default: 42)",
     )
     parser.add_argument(
-        "--hidden-dim",
-        type=int,
-        default=128,
-        help="Hidden layer dimension (default: 128)",
-    )
-    parser.add_argument(
         "--epochs",
         type=int,
         default=100,
         help="Number of training epochs (default: 100)",
-    )
-    parser.add_argument(
-        "--patience",
-        type=int,
-        default=15,
-        help="Early stopping patience (default: 15)",
     )
     parser.add_argument(
         "--batch-size",
@@ -90,59 +79,105 @@ def parse_args() -> argparse.Namespace:
         help="Adam learning rate (default: 0.001)",
     )
     parser.add_argument(
+        "--patience",
+        type=int,
+        default=20,
+        help="Early stopping patience (default: 20)",
+    )
+    parser.add_argument(
         "--dropout",
         type=float,
-        default=0.3,
-        help="Dropout probability (default: 0.3)",
+        default=0.5,
+        help="Dropout probability for FC layers (default: 0.5)",
     )
     return parser.parse_args()
 
 
-def hold_to_index(hold_name: str) -> int:
-    if len(hold_name) < 2:
-        return -1
-    col_char = hold_name[0]
-    if col_char < "A" or col_char > "K":
-        return -1
-    row_part = hold_name[1:]
-    if not row_part.isdigit():
-        return -1
-    row = int(row_part)
-    if row < 1 or row > 18:
-        return -1
-    col = ord(col_char) - ord("A")
-    return (row - 1) * NUM_COLS + col
+def hold_to_matrix(holds: list[str]) -> np.ndarray:
+    """Convert a list of hold tokens to an 18×11 binary matrix.
+
+    Args:
+        holds: Hold tokens like ["A1", "B5", "K18"].
+
+    Returns:
+        Float32 array of shape (18, 11) with 1.0 at hold positions.
+    """
+    matrix = np.zeros((NUM_ROWS, NUM_COLS), dtype=np.float32)
+    for token in holds:
+        if len(token) < 2:
+            continue
+        col_char = token[0]
+        if col_char < "A" or col_char > "K":
+            continue
+        row_part = token[1:]
+        if not row_part.isdigit():
+            continue
+        col = ord(col_char) - ord("A")
+        row = int(row_part) - 1
+        if 0 <= row < NUM_ROWS and 0 <= col < NUM_COLS:
+            matrix[row, col] = 1.0
+    return matrix
 
 
-def sequences_to_vectors(
-    route_sequences: list[list[str]],
-) -> np.ndarray:
-    vectors = np.zeros((len(route_sequences), HOLD_VECTOR_DIM), dtype=np.float32)
-    for i, seq in enumerate(route_sequences):
-        for token in seq:
-            idx = hold_to_index(token)
-            if 0 <= idx < HOLD_VECTOR_DIM:
-                vectors[i, idx] = 1.0
-    return vectors
+def sequences_to_matrices(route_sequences: list[list[str]]) -> np.ndarray:
+    """Convert hold token sequences to an array of binary matrices.
+
+    Args:
+        route_sequences: List of hold token lists per route.
+
+    Returns:
+        Float32 array of shape (n_routes, 18, 11).
+    """
+    matrices = np.zeros((len(route_sequences), NUM_ROWS, NUM_COLS), dtype=np.float32)
+    for i, holds in enumerate(route_sequences):
+        matrices[i] = hold_to_matrix(holds)
+    return matrices
 
 
-class MLPClassifier(nn.Module):
+class CNN2DGradePredictor(nn.Module):
+    """4-layer 2D CNN for Moonboard grade prediction.
+
+    Architecture (Petashvili & Rodda 2023):
+        - 4 convolutional layers with 3×3 kernels, batch norm, ReLU
+        - Adaptive average pooling
+        - Two fully connected layers with dropout
+    """
+
     def __init__(
-        self, input_dim: int, hidden_dim: int, num_classes: int, dropout: float = 0.3
+        self,
+        num_classes: int,
+        channels: int = 1,
+        dropout: float = 0.5,
     ):
         super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
-            nn.ReLU(),
+        self.conv_layers = nn.Sequential(
+            nn.Conv2d(channels, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(128, 256, kernel_size=3, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(inplace=True),
+        )
+        self.pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.fc = nn.Sequential(
+            nn.Linear(256, 128),
+            nn.ReLU(inplace=True),
             nn.Dropout(dropout),
-            nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(hidden_dim // 2, num_classes),
+            nn.Linear(128, num_classes),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.net(x)
+        x = self.conv_layers(x)
+        x = self.pool(x)
+        x = x.view(x.size(0), -1)
+        x = self.fc(x)
+        return x
 
 
 def train_epoch(
@@ -155,10 +190,10 @@ def train_epoch(
     model.train()
     total_loss = 0.0
     n_batches = 0
-    for features, labels in loader:
-        features, labels = features.to(device), labels.to(device)
+    for inputs, labels in loader:
+        inputs, labels = inputs.to(device), labels.to(device)
         optimizer.zero_grad()
-        outputs = model(features)
+        outputs = model(inputs)
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
@@ -179,16 +214,16 @@ def evaluate(
     correct = 0
     total = 0
     with torch.no_grad():
-        for features, labels in loader:
-            features, labels = features.to(device), labels.to(device)
-            outputs = model(features)
+        for inputs, labels in loader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            outputs = model(inputs)
             loss = criterion(outputs, labels)
             total_loss += loss.item()
             _, predicted = torch.max(outputs, 1)
             correct += (predicted == labels).sum().item()
             total += labels.size(0)
             n_batches += 1
-    return total_loss / max(n_batches, 1), correct / total
+    return total_loss / max(n_batches, 1), correct / max(total, 1)
 
 
 def train_and_evaluate(
@@ -197,18 +232,17 @@ def train_and_evaluate(
     train_idx: np.ndarray,
     test_idx: np.ndarray,
     seed: int = 42,
-    hidden_dim: int = 128,
     epochs: int = 100,
     batch_size: int = 32,
     learning_rate: float = 0.001,
-    dropout: float = 0.3,
-    patience: int = 15,
+    patience: int = 20,
+    dropout: float = 0.5,
 ) -> dict[str, float]:
-    """Train a fresh MLP on the training fold and evaluate on test fold.
+    """Train a fresh 2D CNN on the training fold and evaluate on test fold.
 
     Args:
         sequences: Preprocessed route sequences (list of token lists).
-        grades: Encoded grade labels.
+        grades: Encoded grade labels (parallel to sequences).
         train_idx: Indices for the training fold.
         test_idx: Indices for the test fold.
         seed: Random seed for reproducibility.
@@ -226,16 +260,20 @@ def train_and_evaluate(
     train_holds: list[list[str]] = []
     test_holds: list[list[str]] = []
     for seq in train_seqs:
-        holds = [t for t in seq if hold_to_index(t) >= 0]
+        holds = [t for t in seq[:-2] if hold_to_matrix([t]).sum() > 0]
         train_holds.append(holds)
     for seq in test_seqs:
-        holds = [t for t in seq if hold_to_index(t) >= 0]
+        holds = [t for t in seq[:-2] if hold_to_matrix([t]).sum() > 0]
         test_holds.append(holds)
 
-    X_train = sequences_to_vectors(train_holds)
-    X_test = sequences_to_vectors(test_holds)
+    X_train = sequences_to_matrices(train_holds)
+    X_test = sequences_to_matrices(test_holds)
     y_train = np.array(train_grades, dtype=np.int64)
     y_test = np.array(test_grades, dtype=np.int64)
+
+    # Add channel dimension: (N, 18, 11) -> (N, 1, 18, 11)
+    X_train = X_train[:, np.newaxis, :, :]
+    X_test = X_test[:, np.newaxis, :, :]
 
     num_classes = len(GRADE_ORDER)
 
@@ -251,9 +289,7 @@ def train_and_evaluate(
     test_loader = DataLoader(test_ds, batch_size=batch_size)
 
     device = get_device()
-    model = MLPClassifier(
-        input_dim=HOLD_VECTOR_DIM,
-        hidden_dim=hidden_dim,
+    model = CNN2DGradePredictor(
         num_classes=num_classes,
         dropout=dropout,
     ).to(device)
@@ -261,7 +297,7 @@ def train_and_evaluate(
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode="min", factor=0.5, patience=15
+        optimizer, mode="min", factor=0.5, patience=patience
     )
 
     best_test_loss = float("inf")
@@ -274,15 +310,16 @@ def train_and_evaluate(
             best_test_loss = test_loss
             best_epoch = epoch
         if epoch - best_epoch >= patience:
+            print(f"Early stopping at epoch {epoch} (no improvement for {patience} epochs)")
             break
 
     all_preds: list[int] = []
     all_labels: list[int] = []
     model.eval()
     with torch.no_grad():
-        for features, lbls in test_loader:
-            features = features.to(device)
-            outputs = model(features)
+        for inputs, lbls in test_loader:
+            inputs = inputs.to(device)
+            outputs = model(inputs)
             _, predicted = torch.max(outputs, 1)
             all_preds.extend(predicted.cpu().numpy().tolist())
             all_labels.extend(lbls.numpy().tolist())
@@ -321,7 +358,7 @@ def main() -> None:
     for seq in all_sequences:
         grade = seq[-2]
         if grade in GRADE_ORDER:
-            holds = [t for t in seq[:-2] if hold_to_index(t) >= 0]
+            holds = [t for t in seq[:-2] if hold_to_matrix([t]).sum() > 0]
             route_sequences.append(holds)
             route_grades.append(grade)
 
@@ -330,10 +367,9 @@ def main() -> None:
     num_classes = len(GRADE_ORDER)
 
     print(f"Valid routes: {len(route_sequences)}")
-    print(f"Hold vector dim: {HOLD_VECTOR_DIM}")
     print(f"Number of classes: {num_classes}")
 
-    X = sequences_to_vectors(route_sequences)
+    X = sequences_to_matrices(route_sequences)
     y = np.array(encoded_grades, dtype=np.int64)
 
     X_train, X_test, y_train, y_test = train_test_split(
@@ -344,6 +380,10 @@ def main() -> None:
         stratify=y,
     )
     print(f"Train: {len(X_train)}  Test: {len(X_test)}")
+
+    # Add channel dimension: (N, 18, 11) -> (N, 1, 18, 11)
+    X_train = X_train[:, np.newaxis, :, :]
+    X_test = X_test[:, np.newaxis, :, :]
 
     train_ds = TensorDataset(
         torch.tensor(X_train, dtype=torch.float32),
@@ -359,9 +399,7 @@ def main() -> None:
     device = get_device()
     print(f"Training on device: {device}")
 
-    model = MLPClassifier(
-        input_dim=HOLD_VECTOR_DIM,
-        hidden_dim=args.hidden_dim,
+    model = CNN2DGradePredictor(
         num_classes=num_classes,
         dropout=args.dropout,
     ).to(device)
@@ -369,7 +407,7 @@ def main() -> None:
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode="min", factor=0.5, patience=15
+        optimizer, mode="min", factor=0.5, patience=args.patience
     )
 
     best_test_loss = float("inf")
@@ -397,9 +435,9 @@ def main() -> None:
     all_labels: list[int] = []
     model.eval()
     with torch.no_grad():
-        for features, lbls in test_loader:
-            features = features.to(device)
-            outputs = model(features)
+        for inputs, lbls in test_loader:
+            inputs = inputs.to(device)
+            outputs = model(inputs)
             _, predicted = torch.max(outputs, 1)
             all_preds.extend(predicted.cpu().numpy().tolist())
             all_labels.extend(lbls.numpy().tolist())
@@ -414,13 +452,11 @@ def main() -> None:
     print(f"Within-1 Accuracy:   {metrics['within_1_accuracy']:.4f}")
     print(f"Within-2 Accuracy:   {metrics['within_2_accuracy']:.4f}")
 
-    save_path = output_dir / "Perceptron_Moonboard.pth"
+    save_path = output_dir / "2DCNN_Moonboard.pth"
     torch.save(
         {
             "model_state_dict": model.state_dict(),
             "config": {
-                "input_dim": HOLD_VECTOR_DIM,
-                "hidden_dim": args.hidden_dim,
                 "num_classes": num_classes,
                 "dropout": args.dropout,
             },

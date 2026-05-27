@@ -78,8 +78,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--epochs",
         type=int,
-        default=500,
-        help="Number of training epochs (default: 500)",
+        default=100,
+        help="Number of training epochs (default: 100)",
+    )
+    parser.add_argument(
+        "--patience",
+        type=int,
+        default=15,
+        help="Early stopping patience (default: 15)",
     )
     parser.add_argument(
         "--batch-size",
@@ -114,9 +120,10 @@ def train_and_evaluate(
     embed_dim: int = 16,
     hidden_dim: int = 128,
     num_layers: int = 3,
-    epochs: int = 500,
+    epochs: int = 100,
     batch_size: int = 32,
     learning_rate: float = 0.001,
+    patience: int = 15,
 ) -> dict[str, float]:
     """Train a fresh LSTM on the training fold and evaluate on test fold.
 
@@ -167,12 +174,16 @@ def train_and_evaluate(
     )
 
     best_test_loss = float("inf")
+    best_epoch = 0
     for epoch in range(epochs):
         train_lstm_epoch(model, train_loader, criterion, optimizer, device)
         test_loss, test_acc = evaluate_lstm(model, test_loader, criterion, device)
         scheduler.step(test_loss)
         if test_loss < best_test_loss:
             best_test_loss = test_loss
+            best_epoch = epoch
+        if epoch - best_epoch >= patience:
+            break
 
     all_preds: list[int] = []
     all_labels: list[int] = []
@@ -266,12 +277,13 @@ def main() -> None:
     )
 
     best_test_loss = float("inf")
+    best_epoch = 0
     for epoch in range(args.epochs):
         train_loss = train_lstm_epoch(model, train_loader, criterion, optimizer, device)
         test_loss, test_acc = evaluate_lstm(model, test_loader, criterion, device)
         scheduler.step(test_loss)
 
-        if epoch % 50 == 0 or epoch == args.epochs - 1:
+        if epoch % 50 == 0 or epoch == args.epochs - 1 or test_loss < best_test_loss:
             print(
                 f"Epoch {epoch:3d} | Train Loss: {train_loss:.4f} | "
                 f"Test Loss: {test_loss:.4f} | Test Acc: {test_acc:.4f}"
@@ -279,6 +291,11 @@ def main() -> None:
 
         if test_loss < best_test_loss:
             best_test_loss = test_loss
+            best_epoch = epoch
+
+        if epoch - best_epoch >= args.patience:
+            print(f"Early stopping at epoch {epoch} (no improvement for {args.patience} epochs)")
+            break
 
     all_preds: list[int] = []
     all_labels: list[int] = []
