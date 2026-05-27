@@ -172,6 +172,8 @@ cython_debug/
 *.csv
 results/
 outputs/
+results.json
+results.md
 
 # MLflow
 mlruns/
