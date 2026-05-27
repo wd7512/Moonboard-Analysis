@@ -68,9 +68,10 @@ moonboard-benchmark --submission-dir submissions/2dcnn-baseline --data-path Raw/
 | Random Forest | **49.55** (±0.4) | **69.65** (±0.9) | **82.88** (±0.7) |
 | Perceptron (MLP) | **45.26** (±0.7) | 45.26 (±0.7) | 70.89 (±1.0) |
 | LSTM | **35.46** (±1.9) | 35.46 (±1.9) | 66.31 (±1.0) |
-| 2DCNN | **27.23** (±5.3) | 27.23 (±5.3) | 55.62 (±8.7) |
+|| 2DCNN | **27.23** (±5.3) | 27.23 (±5.3) | 55.62 (±8.7) |
+|| Ridge Regression | **20.39** (±0.7) | 55.60 (±1.1) | 80.60 (±0.9) |
 
-Results are mean ± std across 5 stratified folds on 10K sampled routes from the 2016 dataset (25K raw / 92K preprocessed). All submissions train with early stopping (patience=10, max 50 epochs).
+Results are mean ± std across 5 stratified folds on 10K sampled routes from the 2016 dataset (25K raw / 92K preprocessed). All neural submissions train with early stopping (patience=10, max 50 epochs); Ridge and Random Forest have no epoch-based training.
 
 #### Submissions
 

@@ -127,9 +127,9 @@ The **Moonboard-Analysis** repo implements:
 | Perceptron (MLP) | 45.26 | 45.26 | 70.89 |
 | LSTM Baseline | 35.46 | 35.46 | 66.31 |
 | 2DCNN | 27.23 | 27.23 | 55.62 |
-| Ridge Regression | 18.07 | 50.36 | 77.11 |
+| Ridge Regression | 20.39 | 55.60 | 80.60 |
 
-> **Note:** All results are from the 5-fold retrain-per-fold CV benchmark (10K stratified subsample of 2016 data). The previous 96.43% RF result was caused by data leakage (multiple variants of the same route in both train and test folds) and has been corrected. Ridge results are from a 2-fold smoke test (2K samples).
+> **Note:** All results are from the 5-fold retrain-per-fold CV benchmark (10K stratified subsample of 2016 data). The previous 96.43% RF result was caused by data leakage (multiple variants of the same route in both train and test folds) and has been corrected.
 
 ---
 
@@ -151,7 +151,7 @@ The **Moonboard-Analysis** repo implements:
 **Goal:** Reproduce the 2DCNN results (0.86 MAE / 1.12 RMSE) and cross-edition generalization experiments.
 
 - [x] **Implement 2DCNN architecture** — 4-layer CNN with 3×3 kernels, trained with Adam optimizer and MSE loss, early stopping (patience=20). Input: one-hot encoded 11×18 binary hold matrix. Implemented at `submissions/2dcnn-baseline/`. Smoke test: 40% exact at 2 epochs (paper reports 42%).
-- [x] **Implement Ridge regression baseline** — Simple linear baseline on 164-dim binary hold vectors. Implemented at `submissions/ridge-baseline/`. Smoke test (2-fold, 2K samples): ~18% exact.
+- [x] **Implement Ridge regression baseline** — Simple linear baseline on 164-dim binary hold vectors. Implemented at `submissions/ridge-baseline/`. 5-fold CV on 10K samples: 20.39% exact, 80.60% within-±2.
 - [ ] **Train and evaluate on 2016 dataset** — Target: 0.86 MAE / 1.12 RMSE / 42% exact / 84% within-±1.
 - [ ] **Cross-edition generalization experiment** — Train on 2016+2017, test on 2019 (and all permutations). Target: LSTM should generalize best with ~2.35 MAE.
 - [ ] **Vision-based baseline** — Generate route images and train ResNet50 / MaxViT backbones. Target: ~1.84 MAE (current SOTA for vision approach, but well below tabular methods).
@@ -197,6 +197,6 @@ The **Moonboard-Analysis** repo implements:
 || **This repo** | **Perceptron (MLP)** | **45.26%** | **45.26%** | — | — |
 || **This repo** | **LSTM** | **35.46%** | **35.46%** | — | — |
 || **This repo** | **2DCNN** | **27.23%** | **27.23%** | — | — |
-|| **This repo** | **Ridge Regression** | **~18%** | **~50%** | — | — |
+|| **This repo** | **Ridge Regression** | **20.39%** | **55.60%** | — | — |
 
 > **Note:** All this-repo results from 5-fold retrain-per-fold CV (10K stratified subsample, 2016 data). Ridge is from a 2-fold smoke test (2K samples). The previous 96.43% RF result was caused by data leakage and has been corrected.
