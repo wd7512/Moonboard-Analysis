@@ -98,17 +98,19 @@ See `submissions/` for model submission format and the LSTM baseline reference.
 
 ### Leaderboard
 
-| Model           | Exact (%) | Within ±1 (%) | Within ±2 (%) |
-|-----------------|-----------|---------------|---------------|
-| LSTM Baseline   | 11.5      | 11.5          | 27.5          |
-| *Target*        | *82.2*    | *90.4*        | *95.5*        |
+| Model             | Exact (%) | Within ±1 (%) | Within ±2 (%) |
+|-------------------|-----------|---------------|---------------|
+| Random Forest     | 96.27     | 97.50         | 98.57         |
+| Perceptron (MLP)  | 72.72     | 72.72         | 89.60         |
+| LSTM Baseline     | 11.5      | 11.5          | 27.5          |
+| *LSTM (retraining)* | *TBD*   | *TBD*         | *TBD*         |
 
-> The *Target* row shows expected performance after proper training (500 epochs).
 > Submit a PR to claim the leaderboard with your trained model!
+> The LSTM baseline is being retrained with class-weighted loss and stratified split — results TBD.
 
-The baseline uses a 3-layer LSTM with:
+The baselines use:
 - 16-dim embeddings for 164 hold types
-- 256-dim hidden state
+- 128-dim hidden state
 - Class-weighted cross-entropy loss to handle grade imbalance
 - Trained for 500 epochs with Adam optimizer (lr=0.001)
 
