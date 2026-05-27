@@ -197,7 +197,10 @@ def format_leaderboard_summary(metrics: dict, grade_order: list[str]) -> str:
     lines.append(f"{'Grade':<8} {'Precision':<12} {'Recall':<12} {'F1':<12}")
     lines.append("-" * 44)
 
+    num_actual = len(metrics["per_class_precision"])
     for i, grade in enumerate(grade_order):
+        if i >= num_actual:
+            break
         prec = metrics["per_class_precision"][i]
         rec = metrics["per_class_recall"][i]
         f1 = metrics["per_class_f1"][i]
@@ -263,8 +266,9 @@ def generate_markdown_report(
     lines.append("| Grade | Precision | Recall | F1 |")
     lines.append("|-------|-----------|--------|-----|")
 
+    num_actual = len(metrics["per_class_precision"])
     grade_order = GRADE_ORDER[:num_classes]
-    for i in range(num_classes):
+    for i in range(min(num_classes, num_actual)):
         grade = grade_order[i] if i < len(grade_order) else f"Class {i}"
         prec = metrics["per_class_precision"][i]
         rec = metrics["per_class_recall"][i]
@@ -432,8 +436,10 @@ def main() -> None:
             }
         )
 
+        num_actual = len(metrics["per_class_precision"])
         for i, grade in enumerate(GRADE_ORDER[:num_classes]):
-            # Sanitize grade name for MLflow (remove + and other special chars)
+            if i >= num_actual:
+                break
             safe_grade = grade.replace("+", "").replace("/", "")
             mlflow.log_metrics(
                 {

@@ -1,10 +1,17 @@
 """5-fold cross-validation benchmark harness for Moonboard climbing grade prediction.
 
-This module implements a SOLID-based benchmark harness for evaluating LSTM
-models using multiple metrics across 5-fold cross-validation.
+This module implements a SOLID-based benchmark harness for evaluating
+**pre-trained** LSTM models using multiple metrics across n-fold
+cross-validation.
+
+IMPORTANT: This harness is designed for PRE-TRAINED models only.  It evaluates
+the same static model on each test fold **without** fold-wise retraining.  If
+you need to train a fresh model per fold (e.g. to measure generalisation of a
+training procedure), this harness is not appropriate.
 """
 
 import json
+import logging
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -14,6 +21,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 from sklearn.model_selection import KFold
+
+logger = logging.getLogger(__name__)
 
 # Module constants
 DEFAULT_N_SPLITS = 5
@@ -216,10 +225,18 @@ class BenchmarkResults:
 
 
 class BenchmarkHarness:
-    """Orchestrates 5-fold CV benchmarking (SOLID: Dependency Inversion).
+    """Orchestrates n-fold CV benchmarking for **pre-trained** models only.
 
-    Accepts pluggable metrics (abstract MetricComputer), runs cross-validation,
-    and aggregates results.
+    Accepts pluggable metrics (abstract MetricComputer), runs cross-validation
+    by evaluating the same static model on each test fold, and aggregates
+    results.
+
+    .. caution::
+
+       This harness does **not** retrain the model per fold.  It is intended
+       solely for evaluating a **pre-trained** model's performance on different
+       data splits.  For measuring the generalisation of a training procedure,
+       you would need fold-wise retraining (not provided here).
     """
 
     def __init__(
@@ -231,7 +248,7 @@ class BenchmarkHarness:
         """Initialize benchmark harness.
 
         Args:
-            model: PyTorch model to benchmark.
+            model: Pre-trained PyTorch model to benchmark.
             metrics: List of MetricComputer instances (pluggable, SOLID).
             device: Torch device (cpu/cuda). Auto-detected if None.
         """
@@ -242,13 +259,46 @@ class BenchmarkHarness:
             else torch.device("cpu")
         )
 
+    @staticmethod
+    def _param_mean_abs(model: nn.Module) -> float:
+        """Compute mean absolute value across all model parameters."""
+        total = 0.0
+        count = 0
+        for p in model.parameters():
+            total += p.data.abs().sum().item()
+            count += p.data.numel()
+        return total / count if count > 0 else 0.0
+
+    def _warn_if_untrained(self) -> None:
+        """Log a warning when model weights resemble a random initialisation.
+
+        Freshly initialised PyTorch linear layers (Kaiming Uniform) produce
+        weights around ±0.09 for typical hidden sizes.  If the mean absolute
+        weight is orders of magnitude smaller the model is probably untrained.
+        """
+        mean_abs = self._param_mean_abs(self.model)
+        if mean_abs < 1e-6:
+            logger.warning(
+                "Model weights appear to be near-zero "
+                "(mean |param| = %g). BenchmarkHarness is designed for "
+                "PRE-TRAINED models only. If this model has not been "
+                "trained, results will be meaningless.",
+                mean_abs,
+            )
+
     def run_benchmark(
         self,
         features: np.ndarray,
         labels: np.ndarray,
         n_splits: int = DEFAULT_N_SPLITS,
     ) -> BenchmarkResults:
-        """Run n-fold cross-validation benchmark.
+        """Run n-fold cross-validation benchmark on a **pre-trained** model.
+
+        .. note::
+
+           The model is **not** retrained per fold.  This method is suitable
+           only for pre-trained models that you want to evaluate on multiple
+           data splits.
 
         Args:
             features: Feature matrix of shape (n_samples, n_features).
@@ -261,6 +311,8 @@ class BenchmarkHarness:
         Raises:
             ValueError: If n_splits is not in range [1, 10].
         """
+        self._warn_if_untrained()
+
         # Validate inputs
         if len(features) != len(labels):
             raise ValueError(
