@@ -129,17 +129,20 @@ def main() -> None:
         num_classes=num_classes,
     ).to(device)
 
-    class_weights = compute_class_weight(
+    # Compute class weights only for classes present in the data
+    unique_classes = np.unique(encoded_grades)
+    class_weights_present = compute_class_weight(
         class_weight="balanced",
-        classes=np.unique(encoded_grades),
+        classes=unique_classes,
         y=encoded_grades,
     )
-    class_weights_tensor = torch.tensor(class_weights, dtype=torch.float32, device=device)
-    weight_str = dict(zip(
-        np.unique(encoded_grades).tolist(),
-        class_weights.round(4).tolist(),
-    ))
-    print(f"Class weights: {weight_str}")
+    # Build full weight tensor for all classes in GRADE_ORDER
+    # Missing classes get weight 1.0 (no up/down weighting)
+    class_weights_full = np.ones(len(GRADE_ORDER), dtype=np.float32)
+    for cls, w in zip(unique_classes, class_weights_present):
+        class_weights_full[cls] = w
+    class_weights_tensor = torch.tensor(class_weights_full, dtype=torch.float32, device=device)
+    print(f"Class weights: {dict(zip(unique_classes.tolist(), class_weights_present.round(4).tolist()))}")
 
     criterion = nn.CrossEntropyLoss(weight=class_weights_tensor)
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
