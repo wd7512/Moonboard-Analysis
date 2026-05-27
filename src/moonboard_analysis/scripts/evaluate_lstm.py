@@ -142,23 +142,21 @@ def main() -> None:
     grade_to_idx = {g: i for i, g in enumerate(GRADE_ORDER)}
     encoded_grades = [grade_to_idx[g] for g in route_grades]
 
-    max_length = 50
     train_seqs, test_seqs, train_grades, test_grades = train_test_split(
         route_sequences, encoded_grades, test_size=0.2, random_state=args.seed,
         stratify=encoded_grades,
     )
-
-    # Build vocab from training sequences (before loading model)
-    vocab = build_vocab(train_seqs)
 
     device = get_device()
     print(f"Loading model from {args.model_path}")
     model, loaded_vocab, model_config = load_model_and_vocab(args.model_path, device)
     print(f"Model loaded on device: {device}")
 
-    # Use loaded vocab if available, otherwise use built vocab
+    # Use loaded vocab from checkpoint if available, otherwise build from training sequences
     if loaded_vocab:
         vocab = loaded_vocab
+    else:
+        vocab = build_vocab(train_seqs)
 
     max_length = model_config["max_length"]
     num_classes = model_config["num_classes"]

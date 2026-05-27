@@ -94,6 +94,8 @@ We report three tolerance-based metrics:
 
 Grade hierarchy: 6B+, 6C, 6C+, 7A, 7A+, 7B, 7B+, 7C, 7C+, 8A, 8A+, ...
 
+See `submissions/` for model submission format and the LSTM baseline reference.
+
 ### Leaderboard
 
 | Model           | Exact (%) | Within ±1 (%) | Within ±2 (%) |
@@ -105,7 +107,7 @@ Grade hierarchy: 6B+, 6C, 6C+, 7A, 7A+, 7B, 7B+, 7C, 7C+, 8A, 8A+, ...
 > Submit a PR to claim the leaderboard with your trained model!
 
 The baseline uses a 3-layer LSTM with:
-- 128-dim embeddings for 164 hold types
+- 16-dim embeddings for 164 hold types
 - 256-dim hidden state
 - Class-weighted cross-entropy loss to handle grade imbalance
 - Trained for 500 epochs with Adam optimizer (lr=0.001)

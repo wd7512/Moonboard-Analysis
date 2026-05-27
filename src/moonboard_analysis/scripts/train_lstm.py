@@ -3,10 +3,12 @@ import sys
 from pathlib import Path
 
 import mlflow
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from sklearn.model_selection import train_test_split
+from sklearn.utils.class_weight import compute_class_weight
 from torch.utils.data import DataLoader
 
 from moonboard_analysis.config import GRADE_ORDER, LSTMConfig
@@ -107,7 +109,8 @@ def main() -> None:
     print(f"Number of classes: {num_classes}")
 
     train_seqs, test_seqs, train_grades, test_grades = train_test_split(
-        route_sequences, encoded_grades, test_size=args.test_size, random_state=args.seed
+        route_sequences, encoded_grades, test_size=args.test_size, random_state=args.seed,
+        stratify=encoded_grades,
     )
 
     train_dataset = LSTMSequenceDataset(train_seqs, train_grades, vocab, max_length)
@@ -126,7 +129,19 @@ def main() -> None:
         num_classes=num_classes,
     ).to(device)
 
-    criterion = nn.CrossEntropyLoss()
+    class_weights = compute_class_weight(
+        class_weight="balanced",
+        classes=np.unique(encoded_grades),
+        y=encoded_grades,
+    )
+    class_weights_tensor = torch.tensor(class_weights, dtype=torch.float32, device=device)
+    weight_str = dict(zip(
+        np.unique(encoded_grades).tolist(),
+        class_weights.round(4).tolist(),
+    ))
+    print(f"Class weights: {weight_str}")
+
+    criterion = nn.CrossEntropyLoss(weight=class_weights_tensor)
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode="min", factor=0.5, patience=20
