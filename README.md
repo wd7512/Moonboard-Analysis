@@ -25,6 +25,12 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
+Or with [uv](https://docs.astral.sh/uv/):
+
+```bash
+uv sync
+```
+
 ## Components
 
 ### Autoencoder Route Compression
@@ -54,18 +60,27 @@ moonboard-train-lstm
 moonboard-evaluate-lstm
 ```
 
-Key results (at epoch 199/500):
+Current results (saved checkpoint, evaluation only):
 | Tolerance | Accuracy |
 |-----------|----------|
-| Exact | 82.2% |
-| Within 1 grade | 90.4% |
-| Within 2 grades | 95.5% |
+| Exact | 11.5% |
+| Within ±1 Grade | 11.5% |
+| Within ±2 Grades | 27.5% |
+| Within ±3 Grades | 51.9% |
+| Within ±4 Grades | 63.4% |
+
+> **Note:** The saved `LSTM_Moonboard.pth` checkpoint is from an incomplete training run.
+> Run `moonboard-train-lstm` to train a proper model, then re-evaluate.
 
 ## Benchmark
 
-We evaluate grade classification performance using 5-fold cross-validation
-on the Moonboard dataset. Each fold uses 80% of routes for training and
+We evaluate grade classification performance using an 80/20 train-test split
+on the Moonboard dataset by default. 80% of routes are used for training and
 20% for evaluation, with stratified sampling to preserve grade distribution.
+
+**Note for researchers:** The `BenchmarkHarness` class in `training/benchmark.py`
+supports n-fold cross-validation for more rigorous evaluation. The CLI script
+uses a simple 80/20 split for faster inference.
 
 ### Metrics
 
@@ -83,7 +98,11 @@ Grade hierarchy: 6B+, 6C, 6C+, 7A, 7A+, 7B, 7B+, 7C, 7C+, 8A, 8A+, ...
 
 | Model           | Exact (%) | Within ±1 (%) | Within ±2 (%) |
 |-----------------|-----------|---------------|---------------|
-| LSTM Baseline   | 82.2      | 90.4          | 95.5          |
+| LSTM Baseline   | 11.5      | 11.5          | 27.5          |
+| *Target*        | *82.2*    | *90.4*        | *95.5*        |
+
+> The *Target* row shows expected performance after proper training (500 epochs).
+> Submit a PR to claim the leaderboard with your trained model!
 
 The baseline uses a 3-layer LSTM with:
 - 128-dim embeddings for 164 hold types

@@ -6,6 +6,7 @@ models using multiple metrics across 5-fold cross-validation.
 
 import json
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -224,7 +225,7 @@ class BenchmarkHarness:
     def __init__(
         self,
         model: nn.Module,
-        metrics: list[MetricComputer],
+        metrics: Sequence[MetricComputer],
         device: Any | None = None,
     ) -> None:
         """Initialize benchmark harness.

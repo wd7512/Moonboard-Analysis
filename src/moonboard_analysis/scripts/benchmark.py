@@ -30,12 +30,6 @@ from moonboard_analysis.data.preprocessing import (
     preprocess_lstm_data,
 )
 from moonboard_analysis.models.lstm import ClimbingGradePredictor
-from moonboard_analysis.training.benchmark import (
-    BenchmarkHarness,
-    ExactAccuracy,
-    WithinOneGrade,
-    WithinTwoGrades,
-)
 from moonboard_analysis.training.metrics import evaluate_classification
 from moonboard_analysis.utils.device import get_device
 from moonboard_analysis.utils.reproducibility import set_seeds
@@ -60,7 +54,10 @@ def parse_args() -> argparse.Namespace:
         "--data-path",
         type=str,
         default=None,
-        help="Path to raw JSON data file (optional, defaults to Raw/moonboard_problems_setup_2016.json)",
+        help=(
+            "Path to raw JSON data file (optional, defaults to "
+            "Raw/moonboard_problems_setup_2016.json"
+        ),
     )
     parser.add_argument(
         "--output-json",
@@ -79,6 +76,23 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
     return parser.parse_args()
+
+
+def build_vocab(sequences: list[list[str]]) -> dict[str, int]:
+    """Build vocabulary from sequences (0 is reserved for padding).
+
+    Args:
+        sequences: List of token sequences.
+
+    Returns:
+        Dict mapping token to index, with 0 reserved for PAD.
+    """
+    tokens = set()
+    for seq in sequences:
+        tokens.update(seq)
+    vocab = {token: i + 1 for i, token in enumerate(sorted(tokens))}
+    vocab["<PAD>"] = 0
+    return vocab
 
 
 def load_model_and_vocab(
@@ -113,7 +127,12 @@ def load_model_and_vocab(
     else:
         # Old format fallback - infer config from state dict
         print("Warning: Old checkpoint format detected. Inferring from state_dict.")
-        state_dict = checkpoint if isinstance(checkpoint, dict) and "embedding.weight" in checkpoint else checkpoint["model_state_dict"] if "model_state_dict" in checkpoint else checkpoint
+        if isinstance(checkpoint, dict) and "embedding.weight" in checkpoint:
+            state_dict = checkpoint
+        elif "model_state_dict" in checkpoint:
+            state_dict = checkpoint["model_state_dict"]
+        else:
+            state_dict = checkpoint
 
         # Infer dimensions from state dict
         vocab_size = state_dict["embedding.weight"].shape[0]
@@ -169,14 +188,14 @@ def format_leaderboard_summary(metrics: dict, grade_order: list[str]) -> str:
     lines.append("BENCHMARK RESULTS SUMMARY")
     lines.append("=" * 60)
 
-    lines.append(f"\nOverall Accuracy Metrics:")
+    lines.append("\nOverall Accuracy Metrics:")
     lines.append(f"  Exact Match:       {metrics['exact_accuracy']:.4f}")
     lines.append(f"  Within ±1 Grade:   {metrics['within_1_accuracy']:.4f}")
     lines.append(f"  Within ±2 Grades:  {metrics['within_2_accuracy']:.4f}")
     lines.append(f"  Within ±3 Grades:  {metrics['within_3_accuracy']:.4f}")
     lines.append(f"  Within ±4 Grades:  {metrics['within_4_accuracy']:.4f}")
 
-    lines.append(f"\nPer-Grade Performance:")
+    lines.append("\nPer-Grade Performance:")
     lines.append(f"{'Grade':<8} {'Precision':<12} {'Recall':<12} {'F1':<12}")
     lines.append("-" * 44)
 
@@ -221,7 +240,7 @@ def generate_markdown_report(
 
     lines.append("## Overall Metrics")
     lines.append(
-        f"| Metric | Value |"
+        "| Metric | Value |"
     )
     lines.append("|--------|-------|")
     lines.append(f"| Test Loss | {results['loss']:.6f} |")
@@ -245,7 +264,7 @@ def generate_markdown_report(
     lines.append("## Per-Grade Performance")
     lines.append("| Grade | Precision | Recall | F1 |")
     lines.append("|-------|-----------|--------|-----|")
-    
+
     grade_order = GRADE_ORDER[:num_classes]
     for i in range(num_classes):
         grade = grade_order[i] if i < len(grade_order) else f"Class {i}"
@@ -274,10 +293,8 @@ def main() -> None:
         sys.exit(1)
 
     device = get_device()
-    print(f"Loading model from {args.model_path}")
-    model, vocab, model_config = load_model_and_vocab(args.model_path, device)
-    print(f"Model loaded on device: {device}")
 
+    # Load and preprocess data FIRST to build vocab
     print(f"Loading data from {data_path}")
     df = load_lstm_data(data_path)
     print(f"Raw data: {len(df)} routes")
@@ -294,15 +311,30 @@ def main() -> None:
             route_sequences.append(seq[:-2])
             route_grades.append(grade)
 
+    # Encode grades BEFORE split (so split uses encoded labels)
     grade_to_idx = {g: i for i, g in enumerate(GRADE_ORDER)}
     encoded_grades = [grade_to_idx[g] for g in route_grades]
 
-    max_length = model_config["max_length"]
-    num_classes = model_config["num_classes"]
-
+    # Split FIRST (before vocab building to prevent data leakage)
     train_seqs, test_seqs, train_grades, test_grades = train_test_split(
         route_sequences, encoded_grades, test_size=0.2, random_state=args.seed
     )
+
+    # Build vocabulary from training sequences ONLY (no data leakage)
+    vocab = build_vocab(train_seqs)
+    print(f"Built vocabulary with {len(vocab)} tokens")
+
+    # Now load model
+    print(f"Loading model from {args.model_path}")
+    model, loaded_vocab, model_config = load_model_and_vocab(args.model_path, device)
+    print(f"Model loaded on device: {device}")
+
+    # Use model's vocab if available, otherwise use built vocab
+    if loaded_vocab:
+        vocab = loaded_vocab
+
+    max_length = model_config["max_length"]
+    num_classes = model_config["num_classes"]
 
     test_dataset = LSTMSequenceDataset(test_seqs, test_grades, vocab, max_length)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size)

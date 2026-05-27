@@ -11,6 +11,7 @@ from moonboard_analysis.training.benchmark import (
     BenchmarkHarness,
     BenchmarkResults,
     ExactAccuracy,
+    MetricComputer,
     WithinOneGrade,
     WithinTwoGrades,
 )
@@ -274,7 +275,7 @@ class TestBenchmarkHarness:
     ) -> None:
         """Verify BenchmarkHarness runs 5-fold CV successfully."""
         features, labels = mock_benchmark_data
-        metrics = [ExactAccuracy()]
+        metrics: list[MetricComputer] = [ExactAccuracy()]
         harness = BenchmarkHarness(model=mock_lstm_classifier, metrics=metrics)
 
         results = harness.run_benchmark(features, labels, n_splits=5)
