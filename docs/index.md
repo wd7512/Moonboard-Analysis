@@ -47,7 +47,12 @@ This project targets these search queries:
 - route compression autoencoder
 - hold configuration classification
 
-## Getting Started
+## Documentation
+
+- [Getting Started Guide](getting-started.md) — installation, running benchmarks, understanding results
+- [Blog: Building the Moonboard ML Benchmark](blog/moonboard-ml-benchmark.md) — the story behind the project
+
+## Quick Start
 
 ```bash
 git clone https://github.com/wd7512/Moonboard-Analysis.git
