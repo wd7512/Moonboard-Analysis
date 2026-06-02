@@ -7,6 +7,7 @@ from moonboard_analysis.training.metrics import (
     _accuracy_within_diagonal,
     evaluate_classification,
     extract_required_metrics,
+    within_k_accuracy,
 )
 
 
@@ -194,3 +195,39 @@ class TestExtractRequiredMetrics:
         assert result["within_two_grades"] == 0.95
         assert result["macro_f1"] == 0.65
         assert len(result) == 4
+
+
+class TestWithinKAccuracy:
+    """Tests for the public within_k_accuracy() function."""
+
+    def test_within_k_accuracy_identity(self) -> None:
+        """Identity 4x4 matrix, k=1 should be 1.0."""
+        conf_matrix = np.eye(4, dtype=int)
+        assert within_k_accuracy(conf_matrix, k=1) == 1.0
+
+    def test_within_k_accuracy_off_diagonal(self) -> None:
+        """Anti-diagonal 4x4: hand-computed expected values."""
+        conf_matrix = np.array(
+            [[0, 0, 0, 1],
+             [0, 0, 1, 0],
+             [0, 1, 0, 0],
+             [1, 0, 0, 0]],
+            dtype=int,
+        )
+        assert within_k_accuracy(conf_matrix, k=1) == 0.5
+        assert within_k_accuracy(conf_matrix, k=2) == 0.5
+        assert within_k_accuracy(conf_matrix, k=3) == 1.0
+
+    def test_within_k_accuracy_k_equals_0(self) -> None:
+        """k=0 should give exact diagonal accuracy only."""
+        conf_matrix = np.array([[1, 2], [3, 4]], dtype=int)
+        assert within_k_accuracy(conf_matrix, k=0) == 5.0 / 10.0
+
+    def test_within_k_accuracy_k_large(self) -> None:
+        """k >= n-1 should capture entire matrix → 1.0."""
+        conf_matrix = np.array(
+            [[1, 2],
+             [3, 4]],
+            dtype=int,
+        )
+        assert within_k_accuracy(conf_matrix, k=5) == 1.0

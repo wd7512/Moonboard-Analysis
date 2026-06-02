@@ -83,6 +83,15 @@ def extract_required_metrics(metrics: dict) -> dict[str, float]:
     }
 
 
+def within_k_accuracy(conf_matrix: np.ndarray, k: int) -> float:
+    n = conf_matrix.shape[0]
+    total_correct = 0
+    for i in range(n):
+        for j in range(max(0, i - k), min(n, i + k + 1)):
+            total_correct += conf_matrix[i, j]
+    return float(total_correct / conf_matrix.sum())
+
+
 def _accuracy_within_diagonal(conf_matrix: np.ndarray, width: int) -> float:
     n = conf_matrix.shape[0]
     total_correct = 0

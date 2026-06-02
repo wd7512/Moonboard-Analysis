@@ -418,7 +418,7 @@ Before creating a new submission, verify ALL of the following:
 - [ ] **Protocol v2:** Will use 5-fold retrain-per-fold CV via `moonboard-benchmark`
 - [ ] **No data leakage:** All feature engineering done inside `train_and_evaluate()` per fold; no global statistics from test data
 - [ ] **Reproducibility:** Uses `set_seeds(seed)`, no randomness outside seeded regions
-- [ ] **Metrics:** Returns `exact_accuracy`, `within_one_grade`, `within_two_grades`, and `macro_f1`
+- [ ] **Metrics:** Returns all required keys per the [submission contract](submissions/README.md#return-dict-contract)
 - [ ] **No pre-trained weights:** Code only, trains from scratch each fold
 - [ ] **Code quality:** Passes `uv run ruff check`, `uv run mypy`, `uv run pytest tests/ -x -q`
 - [ ] **Documentation:** Within 24 hours of submission, entry added to this file (Section 3)
