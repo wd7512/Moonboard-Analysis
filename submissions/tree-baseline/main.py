@@ -158,7 +158,7 @@ def train_and_evaluate(
     y_pred = clf.predict(X_test).tolist()
     y_test_list = y_test.tolist()
 
-    from sklearn.metrics import confusion_matrix
+    from sklearn.metrics import confusion_matrix, f1_score
 
     conf_matrix = confusion_matrix(
         y_test_list, y_pred, labels=range(num_classes)
@@ -177,10 +177,13 @@ def train_and_evaluate(
     within_1 = _within_k(1)
     within_2 = _within_k(2)
 
+    macro_f1 = f1_score(y_test_list, y_pred, average='macro', labels=range(num_classes), zero_division=0)
+
     return {
         "exact_accuracy": exact_accuracy,
         "within_one_grade": within_1,
         "within_two_grades": within_2,
+        "macro_f1": float(macro_f1),
     }
 
 

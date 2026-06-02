@@ -293,6 +293,7 @@ def train_and_evaluate(
         "exact_accuracy": metrics["exact_accuracy"],
         "within_one_grade": metrics["within_1_accuracy"],
         "within_two_grades": metrics["within_2_accuracy"],
+        "macro_f1": metrics["macro_f1"],
     }
 
 
