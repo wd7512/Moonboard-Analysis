@@ -82,15 +82,15 @@ Results are mean +/- std across 5 stratified folds on a 10K stratified subsample
 
 ### 5-Fold CV
 
-| Model | Exact (%) | Within +/-1 (%) | Within +/-2 (%) |
-|-------|-----------|-----------------|-----------------|
-| DeepMLP (ensemble) | 49.60 (0.7) | 49.60 (0.7) | 70.95 (0.7) |
-| Random Forest | 49.55 (0.4) | 69.65 (0.9) | 82.88 (0.7) |
-| FastMLP | 46.61 (0.8) | 46.61 (0.8) | 71.10 (1.0) |
-| Perceptron (MLP) | 45.26 (0.7) | 45.26 (0.7) | 70.89 (1.0) |
-| LSTM | 35.46 (1.9) | 35.46 (1.9) | 66.31 (1.0) |
-| 2DCNN | 27.23 (5.3) | 27.23 (5.3) | 55.62 (8.7) |
-| Ridge Regression | 20.39 (0.7) | 55.60 (1.1) | 80.60 (0.9) |
+| Model | Exact (%) | Within +/-1 (%) | Within +/-2 (%) | Macro-F1 (%) |
+|-------|-----------|-----------------|-----------------|--------------|
+| DeepMLP (ensemble) | 49.60 (0.7) | 49.60 (0.7) | 70.95 (0.7) | TBD |
+| Random Forest | 49.55 (0.4) | 69.65 (0.9) | 82.88 (0.7) | TBD |
+| FastMLP | 46.61 (0.8) | 46.61 (0.8) | 71.10 (1.0) | TBD |
+| Perceptron (MLP) | 45.26 (0.7) | 45.26 (0.7) | 70.89 (1.0) | TBD |
+| LSTM | 35.46 (1.9) | 35.46 (1.9) | 66.31 (1.0) | TBD |
+| 2DCNN | 27.23 (5.3) | 27.23 (5.3) | 55.62 (8.7) | TBD |
+| Ridge Regression | 20.39 (0.7) | 55.60 (1.1) | 80.60 (0.9) | TBD |
 
 DeepMLP trains a 5-model softmax ensemble. Neural submissions use early stopping. Ridge and Random Forest have no epoch-based training.
 

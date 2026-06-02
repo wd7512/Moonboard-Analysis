@@ -33,6 +33,8 @@ GRADE_ORDER (12 classes): 6A, 6A+, 6B+, 6C, 6C+, 7A, 7A+, 7B, 7B+, 7C, 7C+, 8A
 | within_one_grade | % predictions within ±1 grade index |
 | within_two_grades | % predictions within ±2 grade indices |
 | MAE | Mean Absolute Error in grade index space |
+| macro_f1 | Unweighted mean of per-class F1 scores |
+| weighted_f1 | Support-weighted mean of per-class F1 scores |
 
 ---
 
@@ -42,21 +44,23 @@ All results below use 5-fold stratified CV with retrain-per-fold, on a 10K strat
 
 ### 2.1 Leaderboard
 
-| # | Submission | Model Class | Features | Exact (%) | ±1 (%) | ±2 (%) | Training Time | Commit |
-|---|-----------|-------------|----------|-----------|--------|--------|---------------|--------|
-| 1 | deep-mlp-baseline | 4-layer DeepMLP + 5-model ensemble | 654-dim: section-separated + bigram + meta | **49.60** (±0.7) | **49.60** (±0.7) | **70.95** (±0.7) | ~15 min (8K samples) | `6ad6fca` |
-| 2 | tree-baseline | Random Forest (200 trees) | 164-dim binary grid (3×18×11) | **49.55** (±0.4) | **69.65** (±0.9) | **82.88** (±0.7) | ~2 min | `bd12e1c` |
-| 3 | fast-mlp | MLP (198→256→128→12) | 198-dim binary hold vector, standardized per fold, label smoothing 0.05 | **46.61** (±0.8) | 46.61 (±0.8) | 71.10 (±1.0) | ~2 min (92K full) | `bb652f6` |
-| 4 | perceptron-baseline | MLP (198→128→64→12) | 198-dim binary hold vector | **45.26** (±0.7) | 45.26 (±0.7) | 70.89 (±1.0) | ~5 min | `bd12e1c` |
-| 5 | lstm-baseline | 3-layer LSTM (emb=16, hid=128) | Hold token sequences (variable length) | **35.46** (±1.9) | 35.46 (±1.9) | 66.31 (±1.0) | ~30 min | `bd12e1c` |
-| 6 | 2dcnn-baseline | 4-layer 2D CNN (3×3 kernels) | 1×18×11 binary hold matrix (single channel) | **27.23** (±5.3) | 27.23 (±5.3) | 55.62 (±8.7) | ~45 min | `bd12e1c` |
-| 7 | ridge-baseline | Ridge Regression (α=1.0) | 164-dim binary grid (3×18×11) | **20.39** (±0.7) | 55.60 (±1.1) | 80.60 (±0.9) | ~1 min | `543de01` |
+| # | Submission | Model Class | Features | Exact (%) | ±1 (%) | ±2 (%) | Macro-F1 (%) | Training Time | Commit |
+|---|-----------|-------------|----------|-----------|--------|--------|--------------|---------------|--------|
+| 1 | deep-mlp-baseline | 4-layer DeepMLP + 5-model ensemble | 654-dim: section-separated + bigram + meta | **49.60** (±0.7) | **49.60** (±0.7) | **70.95** (±0.7) | TBD | ~15 min (8K samples) | `6ad6fca` |
+| 2 | tree-baseline | Random Forest (200 trees) | 164-dim binary grid (3×18×11) | **49.55** (±0.4) | **69.65** (±0.9) | **82.88** (±0.7) | TBD | ~2 min | `bd12e1c` |
+| 3 | fast-mlp | MLP (198→256→128→12) | 198-dim binary hold vector, standardized per fold, label smoothing 0.05 | **46.61** (±0.8) | 46.61 (±0.8) | 71.10 (±1.0) | TBD | ~2 min (92K full) | `bb652f6` |
+| 4 | perceptron-baseline | MLP (198→128→64→12) | 198-dim binary hold vector | **45.26** (±0.7) | 45.26 (±0.7) | 70.89 (±1.0) | TBD | ~5 min | `bd12e1c` |
+| 5 | lstm-baseline | 3-layer LSTM (emb=16, hid=128) | Hold token sequences (variable length) | **35.46** (±1.9) | 35.46 (±1.9) | 66.31 (±1.0) | TBD | ~30 min | `bd12e1c` |
+| 6 | 2dcnn-baseline | 4-layer 2D CNN (3×3 kernels) | 1×18×11 binary hold matrix (single channel) | **27.23** (±5.3) | 27.23 (±5.3) | 55.62 (±8.7) | TBD | ~45 min | `bd12e1c` |
+| 7 | ridge-baseline | Ridge Regression (α=1.0) | 164-dim binary grid (3×18×11) | **20.39** (±0.7) | 55.60 (±1.1) | 80.60 (±0.9) | TBD | ~1 min | `543de01` |
+
+> Macro-F1 scores will be populated after the next full benchmark run.
 
 **Full-data results (no subsampling):**
 
-| # | Submission | Exact (%) | ±1 (%) | ±2 (%) | Training Time |
-|---|-----------|-----------|--------|--------|---------------|
-| 1 | fast-mlp | **82.56** (±0.4) | 82.56 (±0.4) | 90.01 (±0.4) | ~5 min |
+| # | Submission | Exact (%) | ±1 (%) | ±2 (%) | Macro-F1 (%) | Training Time |
+|---|-----------|-----------|--------|--------|--------------|---------------|
+| 1 | fast-mlp | **82.56** (±0.4) | 82.56 (±0.4) | 90.01 (±0.4) | TBD | ~5 min |
 
 ---
 
@@ -394,7 +398,7 @@ Before creating a new submission, verify ALL of the following:
 - [ ] **Protocol v2:** Will use 5-fold retrain-per-fold CV via `moonboard-benchmark`
 - [ ] **No data leakage:** All feature engineering done inside `train_and_evaluate()` per fold; no global statistics from test data
 - [ ] **Reproducibility:** Uses `set_seeds(seed)`, no randomness outside seeded regions
-- [ ] **Metrics:** Uses `evaluate_classification()` (note within-metric bug — document which function you use)
+- [ ] **Metrics:** Returns `exact_accuracy`, `within_one_grade`, `within_two_grades`, and `macro_f1`
 - [ ] **No pre-trained weights:** Code only, trains from scratch each fold
 - [ ] **Code quality:** Passes `uv run ruff check`, `uv run mypy`, `uv run pytest tests/ -x -q`
 - [ ] **Documentation:** Within 24 hours of submission, entry added to this file (Section 3)
