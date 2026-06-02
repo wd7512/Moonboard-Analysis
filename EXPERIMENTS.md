@@ -293,6 +293,24 @@ All 8 submissions run on the full dataset (25,738 unique routes after deduplicat
 - **Full-data (26K):** 39.51% exact, 64.12% within-1, 82.59% within-2, 15.18% macro-F1
 - **Status:** Transformer is functional but doesn't outperform simpler sequence models on this data.
 
+### 3.14 Ordinal Regression — CORAL (ordinal-regression)
+
+- **Commit:** `feat/ordinal-regression` (unmerged as of this writing)
+- **Model:** FastMLP with CORAL head — 198-dim input → 256 → 128 → (K-1=11) binary logits. CORAL uses shared weight with cumulative biases for monotonic threshold prediction.
+- **Loss Function:** BCEWithLogitsLoss over ordinal thresholds (11 binary outputs per sample)
+- **Training:** Adam, lr=0.001, batch_size=256, ReduceLROnPlateau(factor=0.5, patience=10), early stopping patience=15, best-state checkpointing
+- **Key Observations:**
+  - 37.02% exact — lower than fast-mlp (40.50%), similar to LSTM baseline
+  - **Best within-1 accuracy (68.16%)** and **best within-2 accuracy (87.23%)** across ALL submissions
+  - Ordinal regression makes errors that are closer to the true grade — precisely what theory predicts
+  - Highest within-2 of any submission by +2.73pp (previous best: ridge at 86.30%)
+  - Macro-F1 (18.19%) is excellent — second only to class-balanced-loss (18.72%)
+  - CORAL architecture is theoretically principled (Drummond & Popinga 2021): grades are ordered, not categorical
+  - Training time ~5 min
+- **NOT EXPERIMENTED:** CORAL + Focal loss (ordinal focal), CORAL with class-balanced loss, deeper CORAL head, different threshold strategies
+- **Full-data (26K):** 37.02% exact, **68.16%** within-1, **87.23%** within-2, 18.19% macro-F1
+- **Status:** Best within-grade metrics on leaderboard. Ordinal regression is the right loss for the grade prediction task — it just doesn't maximize exact accuracy.
+
 ---
 
 ## 4. Feature Engineering Techniques Tried
