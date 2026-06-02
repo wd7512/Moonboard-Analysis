@@ -26,8 +26,18 @@ See [`submissions/README.md`](submissions/README.md) for the full submission for
 
 1. Create a folder under `submissions/<your-model-name>/`
 2. Include a `main.py` with `--data-path`, `--output-dir`, `--seed` arguments
-3. Train, evaluate, and save your model
-4. Submit a PR with your code and benchmark results
+3. **Run the gate checker before submitting:**
+   ```bash
+   uv run python submissions/check_experiment.py \
+       --submission-dir submissions/<your-model-name>
+   ```
+   The checker validates: interface contract, no pre-trained weights, tree-method policy, reproducibility, required metrics, feature redundancy warnings, code quality, and training time estimates. A failing gate must be resolved before the PR will be accepted.
+4. **Check [`EXPERIMENTS.md`](EXPERIMENTS.md)** to confirm your experiment is not redundant. If your model family + feature representation is listed as "Exhausted" or "Banned", you must provide a novel variation.
+5. Run the benchmark:
+   ```bash
+   uv run moonboard-benchmark --submission-dir submissions/<your-model-name>
+   ```
+6. Submit a PR with your code, benchmark results, and an EXPERIMENTS.md entry (Section 3)
 
 ## Code Style
 

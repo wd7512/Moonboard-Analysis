@@ -89,3 +89,27 @@ uv run python submissions/<model-name>/main.py [ARGS]
   Demonstrates non-PyTorch submissions.
 - **`ridge-baseline/`** — Ridge regression on 164-dim binary hold vectors.
   Simple linear baseline; predicts grade index via rounded regression output.
+
+## Before You Submit — Gate Check
+
+Every new submission MUST pass the experiment gate checker:
+
+```bash
+uv run python submissions/check_experiment.py --submission-dir submissions/<your-model-name>
+```
+
+The checker runs these gates (all must pass for exit code 0):
+
+| Gate | Description | Type |
+|------|-------------|------|
+| Interface contract | `main.py` exists with `train_and_evaluate(sequences, grades, train_idx, test_idx, ...)` | PASS/FAIL |
+| No pre-trained weights | No `.pth`, `.joblib`, `.h5`, `.onnx` files in submission dir | PASS/FAIL |
+| Uses `set_seeds` | Calls `set_seeds(seed)` for reproducibility | PASS/FAIL |
+| Required metrics | Returns `exact_accuracy`, `within_one_grade`, `within_two_grades` | PASS/FAIL |
+| Feature redundancy | Warns if feature representation duplicates existing submission | WARN |
+| Training time | Warns if estimated time is slow at 250K samples | PASS/WARN |
+| Code quality | Runs `uv run ruff check` on submission | PASS/WARN |
+
+Exit 0 = no failures (warnings ok). Exit 1 = gate failure.
+
+**Also required:** Read [`EXPERIMENTS.md`](../EXPERIMENTS.md) and verify your experiment is novel BEFORE coding. If your planned model + feature combo is already in the decision matrix as "Exhausted" or "Banned", provide a documented novel variation or choose a different direction.
