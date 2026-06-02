@@ -218,6 +218,23 @@ All 8 submissions run on the full dataset (25,738 unique routes after deduplicat
 - **Full-data (26K):** 39.31% exact, 62.41% within-1, 81.20% within-2, 14.17% macro-F1
 - **Status:** Best CNN submission. Successfully narrows the paper reproduction gap.
 
+### 3.10 Focal Loss (focal-loss)
+
+- **Commit:** `feat/focal-loss` (unmerged as of this writing)
+- **Model:** FastMLP (198-dim binary hold vector → 256 → 128 → 12) — identical to fast-mlp architecture
+- **Loss Function:** FocalLoss(γ=2.0) instead of CrossEntropyLoss(label_smoothing=0.05)
+- **Training:** Adam, lr=0.001, batch_size=256, ReduceLROnPlateau(factor=0.5, patience=10), early stopping patience=15, best-state checkpointing
+- **Key Observations:**
+  - 40.73% exact — beats fast-mlp (40.50%) by +0.23pp, ranks #3 overall
+  - Focal Loss focuses training on hard misclassified examples, helping with grade imbalance
+  - Within-1 (65.56%) and within-2 (84.44%) also improved over fast-mlp (64.89%, 83.69%)
+  - Macro-F1 (16.72%) improved over fast-mlp (15.44%) — loss function directly impacts per-class performance
+  - Same training speed as fast-mlp (~5 min)
+  - No hyperparameter sweep on γ — γ=2.0 from literature default
+- **NOT EXPERIMENTED:** γ sweep, α weighting per class, combined label smoothing + focal loss
+- **Full-data (26K):** 40.73% exact, 65.56% within-1, 84.44% within-2, 16.72% macro-F1
+- **Status:** Best loss-function-only improvement. Suggests class imbalance is a significant factor.
+
 ---
 
 ## 4. Feature Engineering Techniques Tried
