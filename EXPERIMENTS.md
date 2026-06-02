@@ -227,7 +227,7 @@ All 8 submissions run on the full dataset (25,738 unique routes after deduplicat
 | ResNet / skip connections for CNN | Address gradient degradation in deeper spatial models | Medium |
 | Cross-edition features (board configuration conditioning) | Generalization across Moonboard editions | High |
 | Vision-based (rendered route images + ResNet) | Non-tabular approach; paper reports 1.84 MAE | High |
-| Ordinal regression loss | Treat grades as ordered, not independent classes | Low |
+| Ordinal regression loss | Treat grades as ordered, not independent classes. Drummond & Popinga (2021) justify this but the exact 2.1× factor is model-dependent; any monotonic mapping captures the key insight. | Low |
 
 ---
 
@@ -303,8 +303,16 @@ Key papers on Moonboard climbing route grade prediction and their relationship t
 
 - **Citation:** arXiv:2111.08140
 - **Link:** https://arxiv.org/abs/2111.08140
-- **Summary:** Dynamic Bradley-Terry model with MCMC inference on climbing ascent data. Established that climbing grade scales are **logarithmic** in difficulty (~2.1× per grade for French/Ewbank/UIAA, ~3.17× for V-scale).
-- **Relevance to this repo:** Provides theoretical justification for treating grades as ordinal rather than categorical. Relevant to loss function design — ordinal regression or MSE loss on grade indices may be more appropriate than cross-entropy on independent classes.
+- **Summary:** Dynamic Bradley-Terry model with MCMC inference on climbing ascent data. Established that climbing grade scales are **logarithmic** in difficulty (~2.1× per grade for French/Ewbank/UIAA, ~3.17× for V-scale). The model treats each ascent attempt as a logistic contest between climber ability (time-varying Gaussian process) and route difficulty (fixed). The scale parameter `m` maps grade increments to log-odds of success.
+- **What "2.1× harder" means:** A climber of fixed ability has ~2.1× lower odds of sending a route one grade higher. This is consistent with the observation that each grade step has roughly 2-3× fewer ascents by climbers of comparable strength — the model quantifies this relationship rather than discovering a new property.
+- **Critical assessment:**
+  - The model separates climber ability from route difficulty (better than raw send-count curves) and produces uncertainty bounds via MCMC. Cross-system consistency (French ≈ Ewbank ≈ UIAA, V-scale steeper) is a genuine finding.
+  - However, the scale parameter `m` is identifiable only through priors on ability variance — if climbers are assumed more spread out, `m` increases. The 2.1× factor is prior-dependent.
+  - The data is observational, not experimental. Selection bias is unavoidable: harder routes attract stronger climbers. The model partially addresses this but can't fully disentangle ability from difficulty.
+  - "Difficulty" is defined circularly through the grade consensus. The model tells you the grade scale is log-linear with factor ~2.1×, but the scale was set by community perception — the model quantifies that consensus, it doesn't independently verify it.
+  - The V-scale result (3.17× vs 2.1× for French) is interesting and consistent with climber intuition (V-scale compresses at the top), but could be a selection artifact: fewer boulderers at the highest grades steepen the apparent slope.
+  - The Weber-Fechner connection (perception is logarithmic) is a plausible post-hoc analogy, not a tested mechanism. The paper doesn't independently verify this link.
+- **Bottom line for this repo:** The paper provides the best available justification for treating grades as ordinal-logarithmic rather than categorical. Ordinal regression or MSE loss on log-grade space is theoretically justified. But the exact 2.1× factor should not be treated as a physical constant — it's a model-dependent estimate that's consistent with, not independent of, the send-count distribution. A loss function that treats grades as ordered (any monotonic mapping) captures the key insight without committing to a specific exponent.
 - **Related direction:** Ordinal regression (Section 4, "NOT Yet Tried")
 - **Not yet implemented:** Ordinal regression, grade-aware loss functions.
 
