@@ -1,0 +1,35 @@
+remote_theme: pages-themes/cayman@v0.2.0
+title: Moonboard Analysis & Machine Learning (ML) Benchmark
+description: A machine learning benchmark for Moonboard climbing route grade prediction and route compression via autoencoders. Grade classification (LSTM, CNN, RF, MLP) and autoencoder compression on Moonboard climbing data.
+show_downloads: true
+google_analytics:
+theme_color: "#1a1a2e"
+
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+  - jekyll-feed
+
+# SEO metadata
+author: William Dennis
+lang: en
+twitter:
+  card: summary_large_image
+  username:
+social:
+  name: Moonboard Analysis
+  links:
+    - https://github.com/wd7512/Moonboard-Analysis
+
+# Keywords for SEO
+keywords:
+  - moonboard machine learning
+  - moonboard ml benchmark
+  - moonboard grade prediction
+  - moonboard analysis
+  - climbing route classification
+  - climbing machine learning
+  - moonboard LSTM
+  - moonboard autoencoder
+  - deep learning climbing
+  - grade prediction model

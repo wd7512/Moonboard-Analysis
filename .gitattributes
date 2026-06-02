@@ -1,0 +1,17 @@
+# Fix GitHub language classification — exclude non-Python files from linguist
+
+# Raw data files - exclude from language stats
+Raw/** linguist-vendored
+Raw/** linguist-detectable=false
+
+# Archive/legacy notebooks - exclude from language stats
+archive/** linguist-vendored
+archive/** linguist-detectable=false
+
+# Notebooks directory - exclude from language stats
+notebooks/** linguist-vendored
+notebooks/** linguist-detectable=false
+
+# JSON data files
+*.json linguist-vendored
+*.json linguist-detectable=false
