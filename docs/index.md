@@ -3,32 +3,29 @@ layout: default
 title: Moonboard Analysis & ML Benchmark
 ---
 
-# Moonboard Analysis & Machine Learning (ML) Benchmark
+# Moonboard Analysis & ML Benchmark
 
-> A machine learning benchmark for Moonboard climbing route grade prediction and route compression.
+A machine learning benchmark for Moonboard climbing route grade prediction and route compression.
 
-## What is This?
+## Overview
 
-The **Moonboard ML Benchmark** is an open-source, reproducible framework for evaluating machine learning models on the [Moonboard](https://moonboard.com) — a standardized climbing wall used by climbers worldwide.
+Route Compression via Autoencoders: 164-dimensional binary hold vectors compressed to a low-dimensional bottleneck and reconstructed. Compared against PCA across 7 ratios.
 
-This project provides:
+Grade Classification: 5-fold cross validation benchmark predicting Fontainebleau grades (6B+ through 8A) from hold configurations. 17 classes, imbalanced distribution.
 
-- **Route Compression** via Autoencoders (164-dimensional binary hold vectors → low-dimensional bottleneck)
-- **Grade Classification** benchmark using 5-fold cross-validation (grades 6B+ through 8A)
-- **Standardized submissions format** so anyone can contribute a model
-- **Leaderboard** tracking Exact, Within-±1, and Within-±2 accuracy across 7 model architectures
+Standardized submission format for contributing new models.
 
-## Moonboard ML Benchmark Leaderboard
+## Leaderboard
 
-| Model | Exact (%) | Within ±1 (%) | Within ±2 (%) |
-|-------|-----------|---------------|---------------|
-| DeepMLP (ensemble) | **49.60** (±0.7) | **49.60** (±0.7) | **70.95** (±0.7) |
-| Random Forest | **49.55** (±0.4) | **69.65** (±0.9) | **82.88** (±0.7) |
-| FastMLP | **46.61** (±0.8) | 46.61 (±0.8) | 71.10 (±1.0) |
-| Perceptron (MLP) | **45.26** (±0.7) | 45.26 (±0.7) | 70.89 (±1.0) |
-| LSTM | **35.46** (±1.9) | 35.46 (±1.9) | 66.31 (±1.0) |
-| 2DCNN | **27.23** (±5.3) | 27.23 (±5.3) | 55.62 (±8.7) |
-| Ridge Regression | **20.39** (±0.7) | 55.60 (±1.1) | 80.60 (±0.9) |
+| Model | Exact (%) | Within +/-1 (%) | Within +/-2 (%) |
+|-------|-----------|-----------------|-----------------|
+| DeepMLP (ensemble) | 49.60 (0.7) | 49.60 (0.7) | 70.95 (0.7) |
+| Random Forest | 49.55 (0.4) | 69.65 (0.9) | 82.88 (0.7) |
+| FastMLP | 46.61 (0.8) | 46.61 (0.8) | 71.10 (1.0) |
+| Perceptron (MLP) | 45.26 (0.7) | 45.26 (0.7) | 70.89 (1.0) |
+| LSTM | 35.46 (1.9) | 35.46 (1.9) | 66.31 (1.0) |
+| 2DCNN | 27.23 (5.3) | 27.23 (5.3) | 55.62 (8.7) |
+| Ridge Regression | 20.39 (0.7) | 55.60 (1.1) | 80.60 (0.9) |
 
 ## Quick Start
 
@@ -41,8 +38,6 @@ moonboard-benchmark --submission-dir submissions/lstm-baseline
 
 ## Citation
 
-If you use this benchmark in research, please cite:
-
 ```bibtex
 @software{moonboard_ml_benchmark_2026,
   title = {Moonboard Analysis & Machine Learning Benchmark},
@@ -54,4 +49,4 @@ If you use this benchmark in research, please cite:
 
 ## License
 
-MIT License — see [LICENSE](https://github.com/wd7512/Moonboard-Analysis/blob/main/LICENSE)
+MIT

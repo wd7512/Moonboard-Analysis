@@ -1,13 +1,11 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
-
 ## [Unreleased]
 
 ### Added
 - `submissions/` directory with model submission format and LSTM baseline reference (`submissions/lstm-baseline/main.py`)
-- `CONTRIBUTING.md` — contribution guidelines
-- `CHANGELOG.md` — this file
+- `CONTRIBUTING.md` -- contribution guidelines
+- `CHANGELOG.md`
 - Class-weighted cross-entropy loss in LSTM training (`train_lstm.py`) to handle grade imbalance
 - Stratified train/test split in LSTM training to preserve grade distribution
 - Stratified train/test split in LSTM evaluation (`evaluate_lstm.py`)
