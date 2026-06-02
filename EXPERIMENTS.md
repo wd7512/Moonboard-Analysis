@@ -259,6 +259,23 @@ All 8 submissions run on the full dataset (25,738 unique routes after deduplicat
 - **Full-data (26K, β=0.9):** 39.87% exact, 65.03% within-1, 83.52% within-2, 18.72% macro-F1
 - **Status:** Best macro-F1 among all submissions. Class balancing is effective for per-class metrics but slightly reduces overall accuracy.
 
+### 3.12 Bottom-to-Top LSTM (bottom-top-lstm)
+
+- **Commit:** `feat/bottom-top-lstm` (unmerged as of this writing)
+- **Model:** Compact LSTM — Embedding(→8) → LSTM(hid=64, 1 layer) → Linear(64→12). Much smaller than lstm-baseline (emb=16, hid=128, 3 layers).
+- **Features:** Token sequences re-ordered by row ascending (bottom-to-top) within each section. Ties in same row randomized.
+- **Training:** Adam, lr=0.001, batch_size=64, epochs=30, ReduceLROnPlateau(factor=0.5, patience=8), early stopping patience=8
+- **Key Observations:**
+  - 40.17% exact — massive improvement over lstm-baseline (37.05%, +3.12pp) despite MUCH smaller model
+  - Primarily driven by bottom-to-top ordering making sequences more natural for LSTM processing
+  - Lower variance than baseline (±0.53% vs ±1.25%) — increased training stability
+  - Only ~8 min training time (vs baseline ~30 min) thanks to compact architecture
+  - Compact model with bottom-to-top ordering nearly matches perceptron (40.18%)
+  - Suggests that sequence order matters significantly for LSTM performance on sparse spatial data
+- **NOT EXPERIMENTED:** Bidirectional LSTM, attention mechanism, BetaMove preprocessing, deeper LSTM with bottom-to-top ordering
+- **Full-data (26K):** 40.17% exact, 65.10% within-1, 83.40% within-2, 14.86% macro-F1
+- **Status:** LSTM is competitive with MLPs when sequences are properly ordered. Bottom-to-top ordering is a simple but effective preprocessing.
+
 ---
 
 ## 4. Feature Engineering Techniques Tried
