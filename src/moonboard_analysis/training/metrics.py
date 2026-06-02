@@ -43,7 +43,7 @@ def evaluate_classification(
     from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
 
     conf_matrix = confusion_matrix(y_true, y_pred, labels=range(num_classes))
-    precision, recall, f1, _ = precision_recall_fscore_support(
+    precision, recall, f1, support = precision_recall_fscore_support(
         y_true, y_pred, labels=range(num_classes), zero_division=0
     )
 
@@ -65,6 +65,8 @@ def evaluate_classification(
         "per_class_precision": precision.tolist(),
         "per_class_recall": recall.tolist(),
         "per_class_f1": f1.tolist(),
+        "macro_f1": float(np.mean(f1)),
+        "weighted_f1": float(np.average(f1, weights=support)),
     }
 
 
