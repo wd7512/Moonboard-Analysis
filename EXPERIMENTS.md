@@ -235,6 +235,30 @@ All 8 submissions run on the full dataset (25,738 unique routes after deduplicat
 - **Full-data (26K):** 40.73% exact, 65.56% within-1, 84.44% within-2, 16.72% macro-F1
 - **Status:** Best loss-function-only improvement. Suggests class imbalance is a significant factor.
 
+### 3.11 Class-Balanced Loss (class-balanced-loss)
+
+- **Commit:** `feat/class-balanced-loss` (unmerged as of this writing)
+- **Model:** FastMLP (198-dim binary hold vector → 256 → 128 → 12) — identical to fast-mlp architecture
+- **Loss Function:** ClassBalancedLoss (Cui et al. CVPR 2019) — effective number of samples weighting: w_y = (1-β)/(1-β^{n_y})
+- **Training:** Adam, lr=0.001, batch_size=256, ReduceLROnPlateau(factor=0.5, patience=10), early stopping patience=15, best-state checkpointing
+- **β Sweep Results:**
+
+| β | Exact (%) | Within-1 (%) | Within-2 (%) | Macro-F1 (%) |
+|---|-----------|-------------|-------------|--------------|
+| 0.9 | **39.87** (±0.75) | 65.03 (±0.89) | 83.52 (±0.48) | **18.72** (±1.04) |
+| 0.99 | 35.71 (±0.70) | 65.26 (±1.14) | 83.69 (±1.13) | **19.48** (±1.10) |
+| 0.999 | 34.01 (±0.79) | 64.64 (±1.34) | 82.87 (±1.12) | **19.02** (±0.94) |
+
+- **Key Observations:**
+  - Best exact accuracy at β=0.9 (39.87%), but still below fast-mlp (40.50%)
+  - Best macro-F1 at β=0.99 (19.48%) — significantly higher than any submission (best prior: lstm 17.81%)
+  - As β increases, class weights approach inverse frequency (n_effective → n), which heavily penalizes rare classes → exact accuracy drops, macro-F1 improves
+  - The trade-off is meaningful: class-balanced loss is the best approach for balanced per-class performance
+  - Base architecture is identical to fast-mlp — the only difference is the loss function
+- **NOT EXPERIMENTED:** Per-class α weighting combined with β, label smoothing + class-balanced loss, class-balanced focal loss
+- **Full-data (26K, β=0.9):** 39.87% exact, 65.03% within-1, 83.52% within-2, 18.72% macro-F1
+- **Status:** Best macro-F1 among all submissions. Class balancing is effective for per-class metrics but slightly reduces overall accuracy.
+
 ---
 
 ## 4. Feature Engineering Techniques Tried
