@@ -70,6 +70,19 @@ def evaluate_classification(
     }
 
 
+def extract_required_metrics(metrics: dict) -> dict[str, float]:
+    required = ["exact_accuracy", "within_1_accuracy", "within_2_accuracy", "macro_f1"]
+    for key in required:
+        if key not in metrics:
+            raise KeyError(f"Missing required metric key: {key}")
+    return {
+        "exact_accuracy": metrics["exact_accuracy"],
+        "within_one_grade": metrics["within_1_accuracy"],
+        "within_two_grades": metrics["within_2_accuracy"],
+        "macro_f1": metrics["macro_f1"],
+    }
+
+
 def _accuracy_within_diagonal(conf_matrix: np.ndarray, width: int) -> float:
     n = conf_matrix.shape[0]
     total_correct = 0

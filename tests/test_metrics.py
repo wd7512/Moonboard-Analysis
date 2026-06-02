@@ -6,6 +6,7 @@ import pytest
 from moonboard_analysis.training.metrics import (
     _accuracy_within_diagonal,
     evaluate_classification,
+    extract_required_metrics,
 )
 
 
@@ -144,3 +145,52 @@ class TestAccuracyWithinDiagonal:
             dtype=int,
         )
         assert _accuracy_within_diagonal(conf_matrix, width=5) == 1.0
+
+
+class TestExtractRequiredMetrics:
+    """Tests for the extract_required_metrics() shared helper."""
+
+    def test_happy_path(self) -> None:
+        """Pass valid metrics dict, verify all 4 contract keys returned."""
+        metrics = {
+            "exact_accuracy": 0.85,
+            "within_1_accuracy": 0.92,
+            "within_2_accuracy": 0.97,
+            "within_3_accuracy": 0.99,
+            "macro_f1": 0.78,
+        }
+        result = extract_required_metrics(metrics)
+
+        assert result["exact_accuracy"] == 0.85
+        assert result["within_one_grade"] == 0.92
+        assert result["within_two_grades"] == 0.97
+        assert result["macro_f1"] == 0.78
+        assert len(result) == 4
+
+    def test_missing_key_raises_error(self) -> None:
+        """Pass dict missing macro_f1, verify KeyError."""
+        metrics = {
+            "exact_accuracy": 0.85,
+            "within_1_accuracy": 0.92,
+            "within_2_accuracy": 0.97,
+        }
+        with pytest.raises(KeyError, match="macro_f1"):
+            extract_required_metrics(metrics)
+
+    def test_extra_keys_ignored(self) -> None:
+        """Pass dict with extra keys, verify only 4 contract keys returned."""
+        metrics = {
+            "exact_accuracy": 0.75,
+            "within_1_accuracy": 0.88,
+            "within_2_accuracy": 0.95,
+            "within_3_accuracy": 0.98,
+            "macro_f1": 0.65,
+            "weighted_f1": 0.70,
+        }
+        result = extract_required_metrics(metrics)
+
+        assert result["exact_accuracy"] == 0.75
+        assert result["within_one_grade"] == 0.88
+        assert result["within_two_grades"] == 0.95
+        assert result["macro_f1"] == 0.65
+        assert len(result) == 4

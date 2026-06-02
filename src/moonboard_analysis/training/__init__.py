@@ -6,7 +6,7 @@ from .benchmark import (
     WithinOneGrade,
     WithinTwoGrades,
 )
-from .metrics import evaluate_classification, evaluate_reconstruction
+from .metrics import evaluate_classification, evaluate_reconstruction, extract_required_metrics
 from .trainer import evaluate_lstm, train_autoencoder, train_lstm_epoch
 
 __all__ = [
@@ -15,6 +15,7 @@ __all__ = [
     "evaluate_lstm",
     "evaluate_reconstruction",
     "evaluate_classification",
+    "extract_required_metrics",
     "BenchmarkHarness",
     "BenchmarkResults",
     "MetricComputer",
