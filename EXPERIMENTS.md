@@ -38,7 +38,7 @@ GRADE_ORDER (12 classes): 6A, 6A+, 6B+, 6C, 6C+, 7A, 7A+, 7B, 7B+, 7C, 7C+, 8A
 
 ## 2. Submitted Models (Protocol v2 — 5-fold retrain-per-fold CV)
 
-All results below use 5-fold stratified CV with retrain-per-fold, on a 10K stratified subsample of the 92K preprocessed 2016 routes, unless otherwise noted.
+All results below use 5-fold stratified CV with retrain-per-fold, on a 10K stratified subsample of the 2016 Moonboard dataset, unless otherwise noted.
 
 ### 2.1 Leaderboard
 
@@ -52,7 +52,7 @@ All results below use 5-fold stratified CV with retrain-per-fold, on a 10K strat
 | 6 | 2dcnn-baseline | 4-layer 2D CNN (3×3 kernels) | 1×18×11 binary hold matrix (single channel) | **27.23** (±5.3) | 27.23 (±5.3) | 55.62 (±8.7) | ~45 min | `bd12e1c` |
 | 7 | ridge-baseline | Ridge Regression (α=1.0) | 164-dim binary grid (3×18×11) | **20.39** (±0.7) | 55.60 (±1.1) | 80.60 (±0.9) | ~1 min | `543de01` |
 
-**Full-data results (92K routes, no subsampling):**
+**Full-data results (no subsampling):**
 
 | # | Submission | Exact (%) | ±1 (%) | ±2 (%) | Training Time |
 |---|-----------|-----------|--------|--------|---------------|

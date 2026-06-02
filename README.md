@@ -78,7 +78,7 @@ moonboard-benchmark --submission-dir submissions/2dcnn-baseline --data-path Raw/
 
 ## Leaderboard
 
-Results are mean +/- std across 5 stratified folds on 10K sampled routes from the 2016 Moonboard dataset (25K raw / 92K preprocessed).
+Results are mean +/- std across 5 stratified folds on a 10K stratified subsample of the 2016 Moonboard dataset.
 
 ### 5-Fold CV
 
@@ -94,13 +94,11 @@ Results are mean +/- std across 5 stratified folds on 10K sampled routes from th
 
 DeepMLP trains a 5-model softmax ensemble. Neural submissions use early stopping. Ridge and Random Forest have no epoch-based training.
 
-### Full-Data Results (92K preprocessed routes)
-
-| Model | Exact (%) | Within +/-1 (%) | Within +/-2 (%) | Training Time |
-|-------|-----------|-----------------|-----------------|---------------|
-| FastMLP | 82.56 (0.4) | 82.56 (0.4) | 90.01 (0.4) | ~5 min |
-
 [Detailed results](results.md) | [DeepMLP results](results_deepmlp.md)
+
+---
+
+## Add Your Own Model
 
 ---
 
