@@ -34,7 +34,7 @@ GRADE_ORDER (12 classes): 6A, 6A+, 6B+, 6C, 6C+, 7A, 7A+, 7B, 7B+, 7C, 7C+, 8A
 | within_two_grades | % predictions within ±2 grade indices |
 | MAE | Mean Absolute Error in grade index space |
 | macro_f1 | Unweighted mean of per-class F1 scores |
-| weighted_f1 | Support-weighted mean of per-class F1 scores |
+| weighted_f1 | Support-weighted mean of per-class F1 scores (computed by `evaluate_classification()`; not yet exposed in submissions) |
 
 ---
 

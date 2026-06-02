@@ -21,6 +21,8 @@ class TestEvaluateClassification:
         assert metrics["exact_accuracy"] == 1.0
         assert metrics["within_1_accuracy"] == 1.0
         assert metrics["within_2_accuracy"] == 1.0
+        assert metrics["macro_f1"] == 1.0
+        assert metrics["weighted_f1"] == 1.0
 
     def test_all_wrong_classification(self) -> None:
         """Verify metrics for completely wrong predictions yield 0.0 accuracy."""
@@ -29,6 +31,8 @@ class TestEvaluateClassification:
         metrics = evaluate_classification(y_true, y_pred, num_classes=3)
 
         assert metrics["exact_accuracy"] == 0.0
+        assert "macro_f1" in metrics
+        assert "weighted_f1" in metrics
 
     def test_within_k_accuracy_monotonic(self) -> None:
         """Verify within-k accuracy is non-decreasing as k increases."""
@@ -50,6 +54,8 @@ class TestEvaluateClassification:
         assert len(metrics["per_class_precision"]) == num_classes
         assert len(metrics["per_class_recall"]) == num_classes
         assert len(metrics["per_class_f1"]) == num_classes
+        assert "macro_f1" in metrics
+        assert "weighted_f1" in metrics
 
     def test_confusion_matrix_shape(self) -> None:
         """Verify confusion matrix is square with correct dimensions."""

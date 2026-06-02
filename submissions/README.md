@@ -50,6 +50,7 @@ def train_and_evaluate(
             "exact_accuracy": float
             "within_one_grade": float
             "within_two_grades": float
+            "macro_f1": float
     """
 ```
 
