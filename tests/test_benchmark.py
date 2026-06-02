@@ -157,17 +157,42 @@ class MacroF1(MetricComputer):
 class TestBenchmarkResults:
     def test_initialization(self) -> None:
         fold_results = [
-            {"exact_accuracy": 0.8, "within_one_grade": 0.9, "within_two_grades": 0.95, "macro_f1": 0.75},
-            {"exact_accuracy": 0.75, "within_one_grade": 0.85, "within_two_grades": 0.93, "macro_f1": 0.72},
-            {"exact_accuracy": 0.82, "within_one_grade": 0.91, "within_two_grades": 0.96, "macro_f1": 0.78},
+            {
+                "exact_accuracy": 0.8,
+                "within_one_grade": 0.9,
+                "within_two_grades": 0.95,
+                "macro_f1": 0.75,
+            },
+            {
+                "exact_accuracy": 0.75,
+                "within_one_grade": 0.85,
+                "within_two_grades": 0.93,
+                "macro_f1": 0.72,
+            },
+            {
+                "exact_accuracy": 0.82,
+                "within_one_grade": 0.91,
+                "within_two_grades": 0.96,
+                "macro_f1": 0.78,
+            },
         ]
         results = BenchmarkResults(fold_results=fold_results)
         assert len(results.fold_results) == 3
 
     def test_mean_scores(self) -> None:
         fold_results = [
-            {"exact_accuracy": 0.8, "within_one_grade": 0.9, "within_two_grades": 0.95, "macro_f1": 0.75},
-            {"exact_accuracy": 0.8, "within_one_grade": 0.9, "within_two_grades": 0.95, "macro_f1": 0.75},
+            {
+                "exact_accuracy": 0.8,
+                "within_one_grade": 0.9,
+                "within_two_grades": 0.95,
+                "macro_f1": 0.75,
+            },
+            {
+                "exact_accuracy": 0.8,
+                "within_one_grade": 0.9,
+                "within_two_grades": 0.95,
+                "macro_f1": 0.75,
+            },
         ]
         results = BenchmarkResults(fold_results=fold_results)
         mean_scores = results.mean_scores()
@@ -176,8 +201,18 @@ class TestBenchmarkResults:
 
     def test_std_scores(self) -> None:
         fold_results = [
-            {"exact_accuracy": 0.8, "within_one_grade": 0.9, "within_two_grades": 0.95, "macro_f1": 0.75},
-            {"exact_accuracy": 0.8, "within_one_grade": 0.9, "within_two_grades": 0.95, "macro_f1": 0.75},
+            {
+                "exact_accuracy": 0.8,
+                "within_one_grade": 0.9,
+                "within_two_grades": 0.95,
+                "macro_f1": 0.75,
+            },
+            {
+                "exact_accuracy": 0.8,
+                "within_one_grade": 0.9,
+                "within_two_grades": 0.95,
+                "macro_f1": 0.75,
+            },
         ]
         results = BenchmarkResults(fold_results=fold_results)
         std_scores = results.std_scores()
@@ -186,8 +221,18 @@ class TestBenchmarkResults:
 
     def test_std_scores_with_variance(self) -> None:
         fold_results = [
-            {"exact_accuracy": 0.6, "within_one_grade": 0.7, "within_two_grades": 0.8, "macro_f1": 0.5},
-            {"exact_accuracy": 0.8, "within_one_grade": 0.9, "within_two_grades": 0.95, "macro_f1": 0.6},
+            {
+                "exact_accuracy": 0.6,
+                "within_one_grade": 0.7,
+                "within_two_grades": 0.8,
+                "macro_f1": 0.5,
+            },
+            {
+                "exact_accuracy": 0.8,
+                "within_one_grade": 0.9,
+                "within_two_grades": 0.95,
+                "macro_f1": 0.6,
+            },
         ]
         results = BenchmarkResults(fold_results=fold_results)
         std_scores = results.std_scores()
@@ -196,8 +241,18 @@ class TestBenchmarkResults:
 
     def test_to_json(self) -> None:
         fold_results = [
-            {"exact_accuracy": 0.8, "within_one_grade": 0.9, "within_two_grades": 0.95, "macro_f1": 0.75},
-            {"exact_accuracy": 0.75, "within_one_grade": 0.85, "within_two_grades": 0.93, "macro_f1": 0.72},
+            {
+                "exact_accuracy": 0.8,
+                "within_one_grade": 0.9,
+                "within_two_grades": 0.95,
+                "macro_f1": 0.75,
+            },
+            {
+                "exact_accuracy": 0.75,
+                "within_one_grade": 0.85,
+                "within_two_grades": 0.93,
+                "macro_f1": 0.72,
+            },
         ]
         results = BenchmarkResults(fold_results=fold_results)
         json_str = results.to_json()
@@ -210,8 +265,18 @@ class TestBenchmarkResults:
 
     def test_to_markdown_table(self) -> None:
         fold_results = [
-            {"exact_accuracy": 0.8, "within_one_grade": 0.9, "within_two_grades": 0.95, "macro_f1": 0.75},
-            {"exact_accuracy": 0.75, "within_one_grade": 0.85, "within_two_grades": 0.93, "macro_f1": 0.72},
+            {
+                "exact_accuracy": 0.8,
+                "within_one_grade": 0.9,
+                "within_two_grades": 0.95,
+                "macro_f1": 0.75,
+            },
+            {
+                "exact_accuracy": 0.75,
+                "within_one_grade": 0.85,
+                "within_two_grades": 0.93,
+                "macro_f1": 0.72,
+            },
         ]
         results = BenchmarkResults(fold_results=fold_results)
         markdown = results.to_markdown_table()
@@ -226,8 +291,18 @@ class TestBenchmarkResults:
     def test_validation_valid_folds(self) -> None:
         """All required keys present: no error."""
         fold_results = [
-            {"exact_accuracy": 0.8, "within_one_grade": 0.9, "within_two_grades": 0.95, "macro_f1": 0.75},
-            {"exact_accuracy": 0.7, "within_one_grade": 0.8, "within_two_grades": 0.9, "macro_f1": 0.65},
+            {
+                "exact_accuracy": 0.8,
+                "within_one_grade": 0.9,
+                "within_two_grades": 0.95,
+                "macro_f1": 0.75,
+            },
+            {
+                "exact_accuracy": 0.7,
+                "within_one_grade": 0.8,
+                "within_two_grades": 0.9,
+                "macro_f1": 0.65,
+            },
         ]
         results = BenchmarkResults(fold_results=fold_results)
         assert len(results.fold_results) == 2
@@ -262,7 +337,12 @@ class TestBenchmarkHarness:
         mock_benchmark_data: tuple[np.ndarray, np.ndarray],
     ) -> None:
         features, labels = mock_benchmark_data
-        metrics: list[MetricComputer] = [ExactAccuracy(), WithinOneGrade(), WithinTwoGrades(), MacroF1()]
+        metrics: list[MetricComputer] = [
+            ExactAccuracy(),
+            WithinOneGrade(),
+            WithinTwoGrades(),
+            MacroF1(),
+        ]
         harness = BenchmarkHarness(model_factory=mock_model_factory, metrics=metrics)
 
         results = harness.run_benchmark(features, labels, n_splits=5)
