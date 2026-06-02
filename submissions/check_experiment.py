@@ -189,7 +189,6 @@ def main() -> None:
     if not sub_dir.is_dir():
         print(f"[FAIL] Interface contract — dir not found: {sub_dir}"); sys.exit(1)
     main_py = sub_dir / "main.py"
-    name = sub_dir.name
     passed = failed = 0
     warnings: list[str] = []
 
@@ -202,12 +201,15 @@ def main() -> None:
     ]:
         ok, msg = fn()
         if ok:
-            print(f"[PASS] {label}"); passed += 1
+            print(f"[PASS] {label}")
+            passed += 1
         else:
-            print(f"[FAIL] {label} — {msg}"); failed += 1
+            print(f"[FAIL] {label} — {msg}")
+            failed += 1
 
     for w in _check_feature_redundancy(main_py):
-        print(f"[WARN] Feature redundancy — {w}"); warnings.append(w)
+        print(f"[WARN] Feature redundancy — {w}")
+        warnings.append(w)
 
     if args.max_samples is not None:
         warn, msg = _timing_warn(main_py, args.max_samples)

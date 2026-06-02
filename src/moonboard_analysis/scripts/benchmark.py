@@ -68,7 +68,7 @@ def parse_args() -> argparse.Namespace:
         "--max-samples",
         type=int,
         default=None,
-        help="Maximum number of samples to use (default: all)",
+        help="Maximum samples (default: all). Prefer moonboard-smoke-test for fast checks.",
     )
     return parser.parse_args()
 
