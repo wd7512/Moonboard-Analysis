@@ -193,7 +193,13 @@ def main() -> None:
     df = load_lstm_data(data_path)
     print(f"Raw data: {len(df)} routes")
 
-    sequences = preprocess_lstm_data(df)
+    # Deduplicate by route name before preprocessing to prevent data leakage:
+    # the hold-swap augmentation creates multiple token sequences per route,
+    # which could leak across CV folds if not grouped together.
+    df = df.drop_duplicates(subset=["Name"])
+    print(f"After deduplication by route name: {len(df)} unique routes")
+
+    sequences = preprocess_lstm_data(df, augment=False)
     sequences = drop_duplicate_sequences(sequences)
     print(f"After preprocessing: {len(sequences)} unique sequences")
 
