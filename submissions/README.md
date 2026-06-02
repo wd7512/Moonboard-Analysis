@@ -54,6 +54,10 @@ def train_and_evaluate(
     """
 ```
 
+#### Return Dict Contract
+
+The four required keys are defined above. The harness validates these keys after every fold. Missing or misnamed keys will cause the gate checker to fail.
+
 The harness calls this function once per CV fold with different `train_idx`/`test_idx`. It must **not** load any pre-trained weights — it must train a fresh model each time.
 
 ### B. `main()` — standalone training script
