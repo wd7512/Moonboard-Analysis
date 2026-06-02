@@ -3,28 +3,16 @@
 [![CI](https://github.com/wd7512/Moonboard-Analysis/actions/workflows/ci.yml/badge.svg)](https://github.com/wd7512/Moonboard-Analysis/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![Docs](https://img.shields.io/badge/docs-gh--pages-blue)](https://wd7512.github.io/Moonboard-Analysis/)
 
-A machine learning benchmark for Moonboard climbing route grade prediction and route compression. Predict route grades from hold configurations using LSTM, CNN, Random Forest, MLP, and autoencoder models. Uses 5-fold cross-validation with pinned dependencies and MLflow tracking.
+Predict climbing route grades from Moonboard hold configurations. Benchmark
+compares LSTM, CNN, MLP, Random Forest, Ridge Regression, and autoencoder
+models under 5-fold cross-validation with pinned dependencies and MLflow
+tracking.
 
----
-
-## What is Moonboard?
-
-The [Moonboard](https://moonboard.com) is a standardized climbing wall used for training. It has a fixed grid of 144 holds (11 rows x 18 columns minus corner cutoffs). Routes are defined by subsets of these holds and graded on the Fontainebleau scale from 6B+ to 8A+.
-
-Route data is publicly available via the Moonboard API, which makes it a useful testbed for reproducible ML experiments on grade classification and route compression.
-
----
-
-## Moonboard ML Benchmark
-
-A framework for evaluating ML models on the task of predicting climbing route grades from hold configurations. Input is a binary vector of length 164 (one dimension per hold), output is one of 17 grade classes (6B+ through 8A). The dataset is imbalanced — most routes cluster around 7A to 7B+.
-
-The benchmark uses 5-fold stratified cross-validation with a retrain-per-fold design. Models available so far:
-
-- Deep learning: LSTM, 2D CNN, MLP, DeepMLP Ensemble, FastMLP
-- Classical ML: Random Forest, Ridge Regression
-- Dimensionality reduction: Autoencoder, PCA
+[Moonboard](https://moonboard.com) routes are defined by subsets of a fixed
+144-hold grid and graded on the Fontainebleau scale (6B+ to 8A+). The
+dataset is imbalanced — most routes cluster around 7A to 7B+.
 
 ---
 
@@ -101,10 +89,6 @@ DeepMLP trains a 5-model softmax ensemble. Neural submissions use early stopping
 
 ## Add Your Own Model
 
----
-
-## Add Your Own Model
-
 New models go in `submissions/<model-name>/main.py` and must expose a `train_and_evaluate()` function:
 
 ```python
@@ -116,7 +100,7 @@ def train_and_evaluate(
     seed: int = 42,
     **kwargs,
 ) -> dict[str, float]:
-    # Return exact, within_1, within_2 (all floats 0-1)
+    # Return exact, within_one_grade, within_two_grades, macro_f1 (all floats 0-1)
     ...
 ```
 
