@@ -162,7 +162,7 @@ All results below use 5-fold stratified CV with retrain-per-fold, on a 10K strat
 
 ### 3.8 Deep MLP with Engineered Features (deep-mlp-baseline)
 
-- **Commit:** Not on main branch — exists in `submissions/deep-mlp-baseline/main.py`
+- **Commit:** `6ad6fca` (main)
 - **Model:** 4-layer MLP — Linear(656→512) → LeakyReLU(0.1) → Dropout(0.15) → Linear(512→256) → LeakyReLU(0.1) → Dropout(0.15) → Linear(256→128) → LeakyReLU(0.1) → Dropout(0.15) → Linear(128→12). Kaiming normal initialization. 5-model ensemble with different seeds.
 - **Features:** 656-dim feature vector:
   - [0:198] Start holds (binary)

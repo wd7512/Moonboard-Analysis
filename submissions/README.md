@@ -89,6 +89,9 @@ uv run python submissions/<model-name>/main.py [ARGS]
   Demonstrates non-PyTorch submissions.
 - **`ridge-baseline/`** — Ridge regression on 164-dim binary hold vectors.
   Simple linear baseline; predicts grade index via rounded regression output.
+- **`deep-mlp-baseline/`** — 4-layer deep MLP with section-separated features,
+  bigram hash features, engineered meta-features, 5-model softmax ensemble.
+  Highest-feature-complexity neural submission.
 
 ## Before You Submit — Gate Check
 
