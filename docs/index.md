@@ -30,28 +30,6 @@ This project provides:
 | 2DCNN | **27.23** (±5.3) | 27.23 (±5.3) | 55.62 (±8.7) |
 | Ridge Regression | **20.39** (±0.7) | 55.60 (±1.1) | 80.60 (±0.9) |
 
-## Key Search Terms
-
-This project targets these search queries:
-
-- moonboard machine learning
-- moonboard ml benchmark
-- moonboard grade prediction
-- moonboard analysis
-- climbing route grade classification
-- moonboard LSTM
-- climbing machine learning benchmark
-- moonboard autoencoder
-- moonboard deep learning
-- climbing AI grade prediction
-- route compression autoencoder
-- hold configuration classification
-
-## Documentation
-
-- [Getting Started Guide](getting-started.md) — installation, running benchmarks, understanding results
-- [Blog: Building the Moonboard ML Benchmark](blog/moonboard-ml-benchmark.md) — the story behind the project
-
 ## Quick Start
 
 ```bash
