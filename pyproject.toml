@@ -35,6 +35,7 @@ moonboard-train-lstm = "moonboard_analysis.scripts.train_lstm:main"
 moonboard-evaluate-lstm = "moonboard_analysis.scripts.evaluate_lstm:main"
 moonboard-benchmark = "moonboard_analysis.scripts.benchmark:main"
 moonboard-viz-ae = "moonboard_analysis.scripts.launch_autoencoder_viz:main"
+moonboard-update-leaderboard = "moonboard_analysis.scripts.generate_leaderboard:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/moonboard_analysis"]

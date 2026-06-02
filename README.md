@@ -70,6 +70,7 @@ Results are mean +/- std across 5 stratified folds on the full dataset (25,738 u
 
 ### Full Dataset (26K routes)
 
+<!-- LEADERBOARD-START -->
 | Model | Exact (%) | Within +/-1 (%) | Within +/-2 (%) | Macro-F1 (%) |
 |-------|-----------|-----------------|-----------------|--------------|
 | DeepMLP (ensemble) | 40.76 ± 0.62 | 65.46 ± 0.55 | 84.49 ± 0.53 | 16.99 ± 0.32 |
@@ -80,6 +81,7 @@ Results are mean +/- std across 5 stratified folds on the full dataset (25,738 u
 | LSTM | 37.05 ± 1.25 | 63.40 ± 0.91 | 83.76 ± 0.57 | 17.81 ± 0.85 |
 | 2DCNN | 36.81 ± 5.30 | 60.66 ± 5.89 | 79.99 ± 4.91 | 14.24 ± 1.14 |
 | Ridge Regression | 23.94 ± 0.64 | 63.63 ± 0.55 | 86.30 ± 0.25 | 12.90 ± 0.38 |
+<!-- LEADERBOARD-END -->
 
 DeepMLP trains a 5-model softmax ensemble. Neural submissions use early stopping. Ridge and Random Forest have no epoch-based training.
 
