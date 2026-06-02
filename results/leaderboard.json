@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "dataset": "Moonboard 2016",
+  "num_routes": 25738,
+  "cv_folds": 5,
+  "description": "Full dataset (25,738 unique routes after deduplication and preprocessing). Corrected within-metrics, leakage-free.",
+  "entries": [
+    {
+      "submission": "deep-mlp-baseline",
+      "model": "DeepMLP (ensemble)",
+      "model_class": "4-layer DeepMLP + 5-model softmax ensemble",
+      "features": "656-dim: section-separated + bigram + meta",
+      "exact_accuracy": {"mean": 0.4076, "std": 0.0062},
+      "within_one_grade": {"mean": 0.6546, "std": 0.0055},
+      "within_two_grades": {"mean": 0.8449, "std": 0.0053},
+      "macro_f1": {"mean": 0.1699, "std": 0.0032},
+      "training_time": "~1 hr"
+    },
+    {
+      "submission": "fast-mlp",
+      "model": "FastMLP",
+      "model_class": "3-layer MLP (198->256->128->12)",
+      "features": "198-dim binary hold vector, per-fold standardized",
+      "exact_accuracy": {"mean": 0.4050, "std": 0.0050},
+      "within_one_grade": {"mean": 0.6489, "std": 0.0069},
+      "within_two_grades": {"mean": 0.8369, "std": 0.0073},
+      "macro_f1": {"mean": 0.1544, "std": 0.0082},
+      "training_time": "~5 min"
+    },
+    {
+      "submission": "perceptron-baseline",
+      "model": "Perceptron (MLP)",
+      "model_class": "3-layer MLP (198->128->64->12)",
+      "features": "198-dim binary hold vector",
+      "exact_accuracy": {"mean": 0.4018, "std": 0.0051},
+      "within_one_grade": {"mean": 0.6567, "std": 0.0093},
+      "within_two_grades": {"mean": 0.8480, "std": 0.0082},
+      "macro_f1": {"mean": 0.1729, "std": 0.0042},
+      "training_time": "~5 min"
+    },
+    {
+      "submission": "gradient-boost-baseline",
+      "model": "Gradient Boost",
+      "model_class": "VotingClassifier (RF + HistGB)",
+      "features": "164-dim binary grid + 8 meta-features",
+      "exact_accuracy": {"mean": 0.3949, "std": 0.0048},
+      "within_one_grade": {"mean": 0.6220, "std": 0.0044},
+      "within_two_grades": {"mean": 0.8078, "std": 0.0031},
+      "macro_f1": {"mean": 0.1669, "std": 0.0045},
+      "training_time": "~5 min"
+    },
+    {
+      "submission": "tree-baseline",
+      "model": "Random Forest",
+      "model_class": "Random Forest (200 trees)",
+      "features": "164-dim binary grid (3x18x11)",
+      "exact_accuracy": {"mean": 0.3851, "std": 0.0046},
+      "within_one_grade": {"mean": 0.6208, "std": 0.0041},
+      "within_two_grades": {"mean": 0.8077, "std": 0.0045},
+      "macro_f1": {"mean": 0.1750, "std": 0.0061},
+      "training_time": "~2 min"
+    },
+    {
+      "submission": "lstm-baseline",
+      "model": "LSTM",
+      "model_class": "3-layer LSTM (emb=16, hid=128)",
+      "features": "Hold token sequences (variable length)",
+      "exact_accuracy": {"mean": 0.3705, "std": 0.0125},
+      "within_one_grade": {"mean": 0.6340, "std": 0.0091},
+      "within_two_grades": {"mean": 0.8376, "std": 0.0057},
+      "macro_f1": {"mean": 0.1781, "std": 0.0085},
+      "training_time": "~30 min"
+    },
+    {
+      "submission": "2dcnn-baseline",
+      "model": "2DCNN",
+      "model_class": "4-layer 2D CNN (3x3 kernels)",
+      "features": "1x18x11 binary hold matrix (single channel)",
+      "exact_accuracy": {"mean": 0.3681, "std": 0.0530},
+      "within_one_grade": {"mean": 0.6066, "std": 0.0589},
+      "within_two_grades": {"mean": 0.7999, "std": 0.0491},
+      "macro_f1": {"mean": 0.1424, "std": 0.0114},
+      "training_time": "~45 min"
+    },
+    {
+      "submission": "ridge-baseline",
+      "model": "Ridge Regression",
+      "model_class": "Ridge Regression (alpha=1.0)",
+      "features": "164-dim binary grid (3x18x11)",
+      "exact_accuracy": {"mean": 0.2394, "std": 0.0064},
+      "within_one_grade": {"mean": 0.6363, "std": 0.0055},
+      "within_two_grades": {"mean": 0.8630, "std": 0.0025},
+      "macro_f1": {"mean": 0.1290, "std": 0.0038},
+      "training_time": "~1 min"
+    }
+  ]
+}
