@@ -74,8 +74,15 @@ def get_sorted_descriptions_from_dict(moves: list, grade: str) -> list[list[str]
     return out
 
 
-def preprocess_lstm_data(df: pd.DataFrame) -> list:
-    """Convert raw DataFrame into tokenised route sequences."""
+def preprocess_lstm_data(df: pd.DataFrame, augment: bool = True) -> list:
+    """Convert raw DataFrame into tokenised route sequences.
+
+    Args:
+        df: Raw DataFrame with route data.
+        augment: If True (default), apply hold-swap augmentation to create up to 4
+            sequences per route. If False, only return the original (unswapped)
+            sequence to prevent data leakage across CV folds.
+    """
     df = df[NECESSARY_COLUMNS]
     for grade in GRADES_TO_DROP:
         df = df[df["Grade"] != grade]
@@ -84,7 +91,11 @@ def preprocess_lstm_data(df: pd.DataFrame) -> list:
     X, y = df["Moves"], df["Grade"]
     data: list = []
     for i in range(len(X)):
-        data += get_sorted_descriptions_from_dict(X[i], y[i])
+        seqs = get_sorted_descriptions_from_dict(X[i], y[i])
+        if augment:
+            data += seqs
+        else:
+            data.append(seqs[0])
     return data
 
 

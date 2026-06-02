@@ -78,19 +78,20 @@ moonboard-benchmark --submission-dir submissions/2dcnn-baseline --data-path Raw/
 
 ## Leaderboard
 
-Results are mean +/- std across 5 stratified folds on a 10K stratified subsample of the 2016 Moonboard dataset.
+Results are mean +/- std across 5 stratified folds on the full dataset (25,738 unique routes after deduplication and preprocessing). Within-metrics use the corrected (bug-fixed) calculation.
 
-### 5-Fold CV
+### Full Dataset (26K routes)
 
-| Model | Exact (%) | Within +/-1 (%) | Within +/-2 (%) |
-|-------|-----------|-----------------|-----------------|
-| DeepMLP (ensemble) | 49.60 (0.7) | 49.60 (0.7) | 70.95 (0.7) |
-| Random Forest | 49.55 (0.4) | 69.65 (0.9) | 82.88 (0.7) |
-| FastMLP | 46.61 (0.8) | 46.61 (0.8) | 71.10 (1.0) |
-| Perceptron (MLP) | 45.26 (0.7) | 45.26 (0.7) | 70.89 (1.0) |
-| LSTM | 35.46 (1.9) | 35.46 (1.9) | 66.31 (1.0) |
-| 2DCNN | 27.23 (5.3) | 27.23 (5.3) | 55.62 (8.7) |
-| Ridge Regression | 20.39 (0.7) | 55.60 (1.1) | 80.60 (0.9) |
+| Model | Exact (%) | Within +/-1 (%) | Within +/-2 (%) | Macro-F1 (%) |
+|-------|-----------|-----------------|-----------------|--------------|
+| DeepMLP (ensemble) | 40.76 (0.62) | 65.46 (0.55) | 84.49 (0.53) | 16.99 (0.32) |
+| FastMLP | 40.50 (0.50) | 64.89 (0.69) | 83.69 (0.73) | 15.44 (0.82) |
+| Perceptron (MLP) | 40.18 (0.51) | 65.67 (0.93) | 84.80 (0.82) | 17.29 (0.42) |
+| Gradient Boost | 39.49 (0.48) | 62.20 (0.44) | 80.78 (0.31) | 16.69 (0.45) |
+| Random Forest | 38.51 (0.46) | 62.08 (0.41) | 80.77 (0.45) | 17.50 (0.61) |
+| LSTM | 37.05 (1.25) | 63.40 (0.91) | 83.76 (0.57) | 17.81 (0.85) |
+| 2DCNN | 36.81 (5.30) | 60.66 (5.89) | 79.99 (4.91) | 14.24 (1.14) |
+| Ridge Regression | 23.94 (0.64) | 63.63 (0.55) | 86.30 (0.25) | 12.90 (0.38) |
 
 DeepMLP trains a 5-model softmax ensemble. Neural submissions use early stopping. Ridge and Random Forest have no epoch-based training.
 

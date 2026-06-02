@@ -23,7 +23,7 @@ from sklearn.ensemble import (
     RandomForestClassifier,
     VotingClassifier,
 )
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, f1_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 
@@ -173,7 +173,7 @@ def extract_labels(sequences: list[list[str]]) -> list[int]:
 
 
 def _compute_metrics(y_true: np.ndarray, y_pred: np.ndarray, n_classes: int) -> dict[str, float]:
-    """Compute exact, within-1, within-2 accuracy metrics."""
+    """Compute exact, within-1, within-2 accuracy metrics and macro F1."""
     conf_matrix = confusion_matrix(y_true, y_pred, labels=range(n_classes))
 
     total_correct = sum(conf_matrix[i][i] for i in range(n_classes))
@@ -186,10 +186,13 @@ def _compute_metrics(y_true: np.ndarray, y_pred: np.ndarray, n_classes: int) -> 
                 correct += conf_matrix[i, j]
         return correct / conf_matrix.sum()
 
+    macro_f1 = f1_score(y_true, y_pred, average='macro', labels=range(n_classes), zero_division=0)
+
     return {
         "exact_accuracy": exact,
         "within_one_grade": _within_k(1),
         "within_two_grades": _within_k(2),
+        "macro_f1": float(macro_f1),
     }
 
 

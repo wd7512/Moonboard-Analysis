@@ -33,6 +33,8 @@ GRADE_ORDER (12 classes): 6A, 6A+, 6B+, 6C, 6C+, 7A, 7A+, 7B, 7B+, 7C, 7C+, 8A
 | within_one_grade | % predictions within ±1 grade index |
 | within_two_grades | % predictions within ±2 grade indices |
 | MAE | Mean Absolute Error in grade index space |
+| macro_f1 | Unweighted mean of per-class F1 scores |
+| weighted_f1 | Support-weighted mean of per-class F1 scores (computed by `evaluate_classification()`; not yet exposed in submissions) |
 
 ---
 
@@ -42,21 +44,34 @@ All results below use 5-fold stratified CV with retrain-per-fold, on a 10K strat
 
 ### 2.1 Leaderboard
 
-| # | Submission | Model Class | Features | Exact (%) | ±1 (%) | ±2 (%) | Training Time | Commit |
-|---|-----------|-------------|----------|-----------|--------|--------|---------------|--------|
-| 1 | deep-mlp-baseline | 4-layer DeepMLP + 5-model ensemble | 654-dim: section-separated + bigram + meta | **49.60** (±0.7) | **49.60** (±0.7) | **70.95** (±0.7) | ~15 min (8K samples) | `6ad6fca` |
-| 2 | tree-baseline | Random Forest (200 trees) | 164-dim binary grid (3×18×11) | **49.55** (±0.4) | **69.65** (±0.9) | **82.88** (±0.7) | ~2 min | `bd12e1c` |
-| 3 | fast-mlp | MLP (198→256→128→12) | 198-dim binary hold vector, standardized per fold, label smoothing 0.05 | **46.61** (±0.8) | 46.61 (±0.8) | 71.10 (±1.0) | ~2 min (92K full) | `bb652f6` |
-| 4 | perceptron-baseline | MLP (198→128→64→12) | 198-dim binary hold vector | **45.26** (±0.7) | 45.26 (±0.7) | 70.89 (±1.0) | ~5 min | `bd12e1c` |
-| 5 | lstm-baseline | 3-layer LSTM (emb=16, hid=128) | Hold token sequences (variable length) | **35.46** (±1.9) | 35.46 (±1.9) | 66.31 (±1.0) | ~30 min | `bd12e1c` |
-| 6 | 2dcnn-baseline | 4-layer 2D CNN (3×3 kernels) | 1×18×11 binary hold matrix (single channel) | **27.23** (±5.3) | 27.23 (±5.3) | 55.62 (±8.7) | ~45 min | `bd12e1c` |
-| 7 | ridge-baseline | Ridge Regression (α=1.0) | 164-dim binary grid (3×18×11) | **20.39** (±0.7) | 55.60 (±1.1) | 80.60 (±0.9) | ~1 min | `543de01` |
+| # | Submission | Model Class | Features | Exact (%) | ±1 (%) | ±2 (%) | Macro-F1 (%) | Training Time | Commit |
+|---|-----------|-------------|----------|-----------|--------|--------|--------------|---------------|--------|
+| 1 | deep-mlp-baseline | 4-layer DeepMLP + 5-model ensemble | 654-dim: section-separated + bigram + meta | **49.60** (±0.7) | **49.60** (±0.7) | **70.95** (±0.7) | TBD | ~15 min (8K samples) | `6ad6fca` |
+| 2 | tree-baseline | Random Forest (200 trees) | 164-dim binary grid (3×18×11) | **49.55** (±0.4) | **69.65** (±0.9) | **82.88** (±0.7) | TBD | ~2 min | `bd12e1c` |
+| 3 | fast-mlp | MLP (198→256→128→12) | 198-dim binary hold vector, standardized per fold, label smoothing 0.05 | **46.61** (±0.8) | 46.61 (±0.8) | 71.10 (±1.0) | TBD | ~2 min (92K full) | `bb652f6` |
+| 4 | perceptron-baseline | MLP (198→128→64→12) | 198-dim binary hold vector | **45.26** (±0.7) | 45.26 (±0.7) | 70.89 (±1.0) | TBD | ~5 min | `bd12e1c` |
+| 5 | lstm-baseline | 3-layer LSTM (emb=16, hid=128) | Hold token sequences (variable length) | **35.46** (±1.9) | 35.46 (±1.9) | 66.31 (±1.0) | TBD | ~30 min | `bd12e1c` |
+| 6 | 2dcnn-baseline | 4-layer 2D CNN (3×3 kernels) | 1×18×11 binary hold matrix (single channel) | **27.23** (±5.3) | 27.23 (±5.3) | 55.62 (±8.7) | TBD | ~45 min | `bd12e1c` |
+| 7 | ridge-baseline | Ridge Regression (α=1.0) | 164-dim binary grid (3×18×11) | **20.39** (±0.7) | 55.60 (±1.1) | 80.60 (±0.9) | TBD | ~1 min | `543de01` |
+
+> Within-metrics in the 10K table above use the buggy calculation (off-by-one in `_accuracy_within_diagonal`). See the full-data table below for corrected within-metrics and Macro-F1 scores.
 
 **Full-data results (no subsampling):**
 
-| # | Submission | Exact (%) | ±1 (%) | ±2 (%) | Training Time |
-|---|-----------|-----------|--------|--------|---------------|
-| 1 | fast-mlp | **82.56** (±0.4) | 82.56 (±0.4) | 90.01 (±0.4) | ~5 min |
+All 8 submissions run on the full dataset (25,738 unique routes after deduplication and preprocessing). Within-metrics use the corrected (bug-fixed) calculation.
+
+| # | Submission | Exact (%) | ±1 (%) | ±2 (%) | Macro-F1 (%) | Training Time |
+|---|-----------|-----------|--------|--------|--------------|---------------|
+| 1 | deep-mlp-baseline | **40.76** (±0.62) | 65.46 (±0.55) | 84.49 (±0.53) | **16.99** (±0.32) | ~1 hr |
+| 2 | fast-mlp | **40.50** (±0.50) | 64.89 (±0.69) | 83.69 (±0.73) | 15.44 (±0.82) | ~5 min |
+| 3 | perceptron-baseline | **40.18** (±0.51) | 65.67 (±0.93) | 84.80 (±0.82) | 17.29 (±0.42) | ~5 min |
+| 4 | gradient-boost-baseline | **39.49** (±0.48) | 62.20 (±0.44) | 80.78 (±0.31) | 16.69 (±0.45) | ~5 min |
+| 5 | tree-baseline | **38.51** (±0.46) | 62.08 (±0.41) | 80.77 (±0.45) | 17.50 (±0.61) | ~2 min |
+| 6 | lstm-baseline | **37.05** (±1.25) | 63.40 (±0.91) | 83.76 (±0.57) | 17.81 (±0.85) | ~30 min |
+| 7 | 2dcnn-baseline | **36.81** (±5.30) | 60.66 (±5.89) | 79.99 (±4.91) | 14.24 (±1.14) | ~45 min |
+| 8 | ridge-baseline | **23.94** (±0.64) | 63.63 (±0.55) | 86.30 (±0.25) | 12.90 (±0.38) | ~1 min |
+
+> Full-data results use the complete ~26K route dataset with the corrected within-metric calculation (Protocol v2, bug-fixed).
 
 ---
 
@@ -73,6 +88,7 @@ All results below use 5-fold stratified CV with retrain-per-fold, on a 10K strat
   - Within-±1 of 55.6% shows monotonic relationship between hold positions and grade
   - Regularization α was not swept; α=1.0 is sklearn default
 - **NOT EXPERIMENTED:** α sweep, polynomial features, interaction terms
+- **Full-data (26K):** 23.94% exact, 12.90% macro-F1
 - **Status:** Baseline only, no further work planned
 
 ### 3.2 Random Forest (tree-baseline)
@@ -86,6 +102,7 @@ All results below use 5-fold stratified CV with retrain-per-fold, on a 10K strat
   - Feature importance analysis not performed
   - **Previously reported 96.43% was due to DATA LEAKAGE** (multiple variants of same route in train and test); corrected to 49.55% after protocol v2
 - **NOT EXPERIMENTED:** n_estimators sweep, max_depth tuning, feature importance analysis, out-of-bag evaluation
+- **Full-data (26K):** 38.51% exact, 17.50% macro-F1
 - **Status:** Reference baseline. Tree methods are fully permitted on the leaderboard.
 
 ### 3.3 Perceptron / Shallow MLP (perceptron-baseline)
@@ -98,6 +115,7 @@ All results below use 5-fold stratified CV with retrain-per-fold, on a 10K strat
   - No feature standardization — raw binary vectors fed directly
   - No section-structure awareness — loses information about start/middle/end hold roles
   - Simpler than FastMLP but significantly worse (45.26% vs 46.61%)
+- **Full-data (26K):** 40.18% exact, 17.29% macro-F1
 - **Status:** Superseded by FastMLP
 
 ### 3.4 FastMLP (fast-mlp)
@@ -116,6 +134,7 @@ All results below use 5-fold stratified CV with retrain-per-fold, on a 10K strat
   - Fastest neural submission: ~2 min for 92K routes (5-fold CV)
   - Large performance jump from perceptron (46.61% vs 45.26%) — even with same architecture depth
   - Full-data (92K, no subsampling) exact accuracy: 82.56% — shows the model benefits enormously from more data
+  - **Full-data (26K, deduplicated):** 40.50% exact, 15.44% macro-F1 — the 92K result included leaked route variants; after dedup, performance drops to 40.50%, in line with other neural models
 - **NOT EXPERIMENTED:** Architecture variations (wider, deeper), alternative activations, residual connections, section-aware features, ensemble
 - **Status:** Current best neural submission
 
@@ -132,6 +151,7 @@ All results below use 5-fold stratified CV with retrain-per-fold, on a 10K strat
   - High variance across folds (±1.9% std) — LSTM training is sensitive to initialization and sequence padding
   - Vocabulary is rebuilt per fold from train split only — no token leakage but small vocab variation
 - **NOT EXPERIMENTED:** Bidirectional LSTM, attention over LSTM outputs, longer embedding dims, pre-trained hold embeddings, BetaMove preprocessing (Duh & Chang 2021), Transformer encoder
+- **Full-data (26K):** 37.05% exact, 17.81% macro-F1
 - **Status:** Serves as sequence-model baseline. Superseded by feature-engineered MLPs.
 
 ### 3.6 2D CNN (2dcnn-baseline)
@@ -147,6 +167,7 @@ All results below use 5-fold stratified CV with retrain-per-fold, on a 10K strat
   - Single-channel input loses section information (start/middle/end cannot be distinguished spatially)
   - AdaptiveAvgPool destroys spatial information — the 3×3 convolutions learn local patterns but global pooling collapses them to a single vector
 - **NOT EXPERIMENTED:** Multi-channel input (3 channels for start/middle/end), spatial transformer, larger kernel sizes, ResNet-style connections, different pooling strategies
+- **Full-data (26K):** 36.81% exact, 14.24% macro-F1
 - **Status:** Needs significant architectural improvements. Paper reproduction not yet achieved.
 
 ### 3.7 Voting Ensemble (gradient-boost-baseline)
@@ -159,6 +180,7 @@ All results below use 5-fold stratified CV with retrain-per-fold, on a 10K strat
   - Tied with Random Forest on exact accuracy, **beat RF on within-grade metrics**
   - Ensemble of bagging (RF) + boosting (HistGB) provides complementary strengths
   - LabelEncoder remapping is critical — some folds don't contain all 12 grades
+- **Full-data (26K):** 39.49% exact, 16.69% macro-F1
 - **Status:** Ensemble reference. Does NOT introduce any new experiment category beyond what tree-baseline already covers.
 
 ### 3.8 Deep MLP with Engineered Features (deep-mlp-baseline)
@@ -180,8 +202,8 @@ All results below use 5-fold stratified CV with retrain-per-fold, on a 10K strat
   - Label smoothing 0.1 (higher than FastMLP's 0.05) for stronger regularization
   - Per-fold standardization applied to all 656 features
   - Ensemble of 5 models with different seeds for variance reduction
-  - Performance: See results.json — 49.60% exact (single-split, Protocol v1). Not yet benchmarked with Protocol v2.
-- **Status:** Benchmarked on Protocol v2 (5-fold CV, 8K stratified samples). 49.60% exact — ties Random Forest for #1 on leaderboard. Section-separated features + bigram hashing + ensemble provide the strongest neural result to date.
+  - **Full-data (26K):** 40.76% exact, 16.99% macro-F1 — highest exact accuracy on full-data benchmark; strong ±1 (65.46%) and ±2 (84.49%) scores
+- **Status:** Benchmarked on Protocol v2 (5-fold CV, full 26K dataset). 40.76% exact — #1 on full-data leaderboard. Section-separated features + bigram hashing + ensemble provide the strongest neural result to date.
 
 ---
 
@@ -394,7 +416,7 @@ Before creating a new submission, verify ALL of the following:
 - [ ] **Protocol v2:** Will use 5-fold retrain-per-fold CV via `moonboard-benchmark`
 - [ ] **No data leakage:** All feature engineering done inside `train_and_evaluate()` per fold; no global statistics from test data
 - [ ] **Reproducibility:** Uses `set_seeds(seed)`, no randomness outside seeded regions
-- [ ] **Metrics:** Uses `evaluate_classification()` (note within-metric bug — document which function you use)
+- [ ] **Metrics:** Returns `exact_accuracy`, `within_one_grade`, `within_two_grades`, and `macro_f1`
 - [ ] **No pre-trained weights:** Code only, trains from scratch each fold
 - [ ] **Code quality:** Passes `uv run ruff check`, `uv run mypy`, `uv run pytest tests/ -x -q`
 - [ ] **Documentation:** Within 24 hours of submission, entry added to this file (Section 3)

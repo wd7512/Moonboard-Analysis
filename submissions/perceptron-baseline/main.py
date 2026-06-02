@@ -29,7 +29,7 @@ from moonboard_analysis.data.preprocessing import (
     drop_duplicate_sequences,
     preprocess_lstm_data,
 )
-from moonboard_analysis.training.metrics import evaluate_classification
+from moonboard_analysis.training.metrics import evaluate_classification, extract_required_metrics
 from moonboard_analysis.utils.device import get_device
 from moonboard_analysis.utils.reproducibility import set_seeds
 
@@ -289,11 +289,7 @@ def train_and_evaluate(
             all_labels.extend(lbls.numpy().tolist())
 
     metrics = evaluate_classification(all_labels, all_preds, num_classes)
-    return {
-        "exact_accuracy": metrics["exact_accuracy"],
-        "within_one_grade": metrics["within_1_accuracy"],
-        "within_two_grades": metrics["within_2_accuracy"],
-    }
+    return extract_required_metrics(metrics)
 
 
 def main() -> None:

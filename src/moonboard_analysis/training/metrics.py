@@ -43,7 +43,7 @@ def evaluate_classification(
     from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
 
     conf_matrix = confusion_matrix(y_true, y_pred, labels=range(num_classes))
-    precision, recall, f1, _ = precision_recall_fscore_support(
+    precision, recall, f1, support = precision_recall_fscore_support(
         y_true, y_pred, labels=range(num_classes), zero_division=0
     )
 
@@ -65,6 +65,21 @@ def evaluate_classification(
         "per_class_precision": precision.tolist(),
         "per_class_recall": recall.tolist(),
         "per_class_f1": f1.tolist(),
+        "macro_f1": float(np.mean(f1)),
+        "weighted_f1": float(np.average(f1, weights=support)),
+    }
+
+
+def extract_required_metrics(metrics: dict) -> dict[str, float]:
+    required = ["exact_accuracy", "within_1_accuracy", "within_2_accuracy", "macro_f1"]
+    for key in required:
+        if key not in metrics:
+            raise KeyError(f"Missing required metric key: {key}")
+    return {
+        "exact_accuracy": metrics["exact_accuracy"],
+        "within_one_grade": metrics["within_1_accuracy"],
+        "within_two_grades": metrics["within_2_accuracy"],
+        "macro_f1": metrics["macro_f1"],
     }
 
 
@@ -72,6 +87,6 @@ def _accuracy_within_diagonal(conf_matrix: np.ndarray, width: int) -> float:
     n = conf_matrix.shape[0]
     total_correct = 0
     for i in range(n):
-        for j in range(max(0, i - width + 1), min(n, i + width)):
+        for j in range(max(0, i - width), min(n, i + width + 1)):
             total_correct += conf_matrix[i, j]
     return total_correct / conf_matrix.sum()

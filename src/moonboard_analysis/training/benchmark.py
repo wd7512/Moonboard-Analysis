@@ -70,9 +70,23 @@ class WithinTwoGrades(MetricComputer):
         return "within_two_grades"
 
 
+REQUIRED_METRIC_KEYS = {"exact_accuracy", "within_one_grade", "within_two_grades", "macro_f1"}
+
+
 @dataclass
 class BenchmarkResults:
     fold_results: list[dict[str, float]]
+
+    def __post_init__(self):
+        if not self.fold_results:
+            return
+        for i, fold in enumerate(self.fold_results):
+            missing = REQUIRED_METRIC_KEYS - set(fold.keys())
+            if missing:
+                raise ValueError(
+                    f"Fold {i} result missing required metric keys: {missing}. "
+                    f"Got keys: {list(fold.keys())}"
+                )
 
     def mean_scores(self) -> dict[str, float]:
         if not self.fold_results:
