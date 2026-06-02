@@ -201,6 +201,23 @@ All 8 submissions run on the full dataset (25,738 unique routes after deduplicat
   - **Full-data (26K):** 40.76% exact, 16.99% macro-F1 — highest exact accuracy on full-data benchmark; strong ±1 (65.46%) and ±2 (84.49%) scores
 - **Status:** Benchmarked on Protocol v2 (5-fold CV, full 26K dataset). 40.76% exact — #1 on full-data leaderboard. Section-separated features + bigram hashing + ensemble provide the strongest neural result to date.
 
+### 3.9 Multi-Channel 2D CNN (multichannel-2dcnn)
+
+- **Commit:** `feat/multichannel-2dcnn` (unmerged as of this writing)
+- **Model:** Compact 2D CNN with 3 input channels (start/middle/end) — Conv2d(3→16, 3×3) → BN → ReLU → Conv2d(16→16, 3×3) → BN → ReLU → MaxPool(2) → Conv2d(16→32, 3×3) → BN → ReLU → MaxPool(2) → AdaptiveAvgPool(1) → Linear(32→12)
+- **Features:** 3-channel 18×11 binary spatial matrices — each channel corresponds to one hold section (start, middle, end). Section boundaries identified via START_END, MIDDLE_END, END_ROUTE tokens in the sequence.
+- **Training:** Adam, lr=0.001, batch_size=64, CrossEntropyLoss (no label smoothing), ReduceLROnPlateau(factor=0.5, patience=10), early stopping patience=10, best-state checkpointing
+- **Key Observations:**
+  - 39.31% exact — significant improvement over single-channel 2DCNN (36.81%, +2.5pp) and variant-stable (±0.70% vs ±5.30%)
+  - Multi-channel input alone accounts for the gain — section awareness helps the spatial model
+  - Compact architecture (3→16→16→32, ~13K params) is dramatically smaller than the 4-layer single-channel model (1→32→64→128→256, ~800K params) yet outperforms it
+  - Still below paper target of 42% (Petashvili & Rodda 2023) — gap narrowed from -5.2pp to -2.7pp
+  - Within-1 (62.41%) and within-2 (81.20%) are competitive with tree-based models
+  - Macro-F1 (14.17%) lags — grade imbalance more pronounced in spatial features
+- **NOT EXPERIMENTED:** Wider channels, residual connections, larger kernels, spatial transformer, label smoothing, class weights
+- **Full-data (26K):** 39.31% exact, 62.41% within-1, 81.20% within-2, 14.17% macro-F1
+- **Status:** Best CNN submission. Successfully narrows the paper reproduction gap.
+
 ---
 
 ## 4. Feature Engineering Techniques Tried
