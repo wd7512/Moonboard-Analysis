@@ -63,6 +63,7 @@ moonboard-benchmark --submission-dir submissions/2dcnn-baseline --data-path Raw/
 
 | Model | Exact (%) | Within ±1 (%) | Within ±2 (%) |
 |-------|-----------|---------------|---------------|
+| DeepMLP (ensemble) | **49.60** (±0.7) | **49.60** (±0.7) | **70.95** (±0.7) |
 | Random Forest | **49.55** (±0.4) | **69.65** (±0.9) | **82.88** (±0.7) |
 | FastMLP | **46.61** (±0.8) | 46.61 (±0.8) | 71.10 (±1.0) |
 | Perceptron (MLP) | **45.26** (±0.7) | 45.26 (±0.7) | 70.89 (±1.0) |
@@ -76,7 +77,7 @@ moonboard-benchmark --submission-dir submissions/2dcnn-baseline --data-path Raw/
 |-------|-----------|---------------|---------------|---------------|
 | FastMLP | **82.56** (±0.4) | 82.56 (±0.4) | 90.01 (±0.4) | ~5 min |
 
-Results are mean ± std across 5 stratified folds on 10K sampled routes from the 2016 dataset (25K raw / 92K preprocessed). All neural submissions train with early stopping (patience=10, max 50 epochs); Ridge and Random Forest have no epoch-based training.
+Results are mean ± std across 5 stratified folds on 10K sampled routes from the 2016 dataset (25K raw / 92K preprocessed). DeepMLP trains a 5-model softmax ensemble; all neural submissions use early stopping; Ridge and Random Forest have no epoch-based training.
 
 #### Submissions
 

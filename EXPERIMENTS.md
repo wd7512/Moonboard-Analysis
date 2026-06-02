@@ -44,12 +44,13 @@ All results below use 5-fold stratified CV with retrain-per-fold, on a 10K strat
 
 | # | Submission | Model Class | Features | Exact (%) | ±1 (%) | ±2 (%) | Training Time | Commit |
 |---|-----------|-------------|----------|-----------|--------|--------|---------------|--------|
-| 1 | tree-baseline | Random Forest (200 trees) | 164-dim binary grid (3×18×11) | **49.55** (±0.4) | **69.65** (±0.9) | **82.88** (±0.7) | ~2 min | `bd12e1c` |
-| 2 | fast-mlp | MLP (198→256→128→12) | 198-dim binary hold vector, standardized per fold, label smoothing 0.05 | **46.61** (±0.8) | 46.61 (±0.8) | 71.10 (±1.0) | ~2 min (92K full) | `bb652f6` |
-| 3 | perceptron-baseline | MLP (198→128→64→12) | 198-dim binary hold vector | **45.26** (±0.7) | 45.26 (±0.7) | 70.89 (±1.0) | ~5 min | `bd12e1c` |
-| 4 | lstm-baseline | 3-layer LSTM (emb=16, hid=128) | Hold token sequences (variable length) | **35.46** (±1.9) | 35.46 (±1.9) | 66.31 (±1.0) | ~30 min | `bd12e1c` |
-| 5 | 2dcnn-baseline | 4-layer 2D CNN (3×3 kernels) | 1×18×11 binary hold matrix (single channel) | **27.23** (±5.3) | 27.23 (±5.3) | 55.62 (±8.7) | ~45 min | `bd12e1c` |
-| 6 | ridge-baseline | Ridge Regression (α=1.0) | 164-dim binary grid (3×18×11) | **20.39** (±0.7) | 55.60 (±1.1) | 80.60 (±0.9) | ~1 min | `543de01` |
+| 1 | deep-mlp-baseline | 4-layer DeepMLP + 5-model ensemble | 654-dim: section-separated + bigram + meta | **49.60** (±0.7) | **49.60** (±0.7) | **70.95** (±0.7) | ~15 min (8K samples) | `6ad6fca` |
+| 2 | tree-baseline | Random Forest (200 trees) | 164-dim binary grid (3×18×11) | **49.55** (±0.4) | **69.65** (±0.9) | **82.88** (±0.7) | ~2 min | `bd12e1c` |
+| 3 | fast-mlp | MLP (198→256→128→12) | 198-dim binary hold vector, standardized per fold, label smoothing 0.05 | **46.61** (±0.8) | 46.61 (±0.8) | 71.10 (±1.0) | ~2 min (92K full) | `bb652f6` |
+| 4 | perceptron-baseline | MLP (198→128→64→12) | 198-dim binary hold vector | **45.26** (±0.7) | 45.26 (±0.7) | 70.89 (±1.0) | ~5 min | `bd12e1c` |
+| 5 | lstm-baseline | 3-layer LSTM (emb=16, hid=128) | Hold token sequences (variable length) | **35.46** (±1.9) | 35.46 (±1.9) | 66.31 (±1.0) | ~30 min | `bd12e1c` |
+| 6 | 2dcnn-baseline | 4-layer 2D CNN (3×3 kernels) | 1×18×11 binary hold matrix (single channel) | **27.23** (±5.3) | 27.23 (±5.3) | 55.62 (±8.7) | ~45 min | `bd12e1c` |
+| 7 | ridge-baseline | Ridge Regression (α=1.0) | 164-dim binary grid (3×18×11) | **20.39** (±0.7) | 55.60 (±1.1) | 80.60 (±0.9) | ~1 min | `543de01` |
 
 **Full-data results (92K routes, no subsampling):**
 
@@ -180,7 +181,7 @@ All results below use 5-fold stratified CV with retrain-per-fold, on a 10K strat
   - Per-fold standardization applied to all 656 features
   - Ensemble of 5 models with different seeds for variance reduction
   - Performance: See results.json — 49.60% exact (single-split, Protocol v1). Not yet benchmarked with Protocol v2.
-- **Status:** Written but NOT YET BENCHMARKED on the leaderboard (Protocol v2). Needs 5-fold CV run.
+- **Status:** Benchmarked on Protocol v2 (5-fold CV, 8K stratified samples). 49.60% exact — ties Random Forest for #1 on leaderboard. Section-separated features + bigram hashing + ensemble provide the strongest neural result to date.
 
 ---
 
@@ -363,7 +364,7 @@ Use this to determine if your planned experiment is novel:
 | **Linear** (Ridge) | Complete | Polynomial features, interaction terms | Low ceiling (~20% exact) |
 | **Tree** (RF, GB, HistGB) | Mature | XGBoost, LGBM, CatBoost, feature importance, SHAP | — |
 | **MLP (flat features)** | Mature | Residual connections, deeper arch, class weights | Diminishing returns vs feature engineering |
-| **MLP (engineered features)** | Pending benchmark | Run Protocol v2 benchmark | Needs 5-fold CV run |
+| **MLP (engineered features)** | Benchmarked | Ablation studies, feature importance, try without ensemble | — |
 | **LSTM** | Underperforming | Replace with Transformer; add BetaMove (Sec 7.1) | Sequential model mismatch for spatial data |
 | **2D CNN** | Underperforming (reproduction failed) | Multi-channel input, residual connections (Sec 7.2) | Needs paper reproduction first |
 | **Transformer** | NOT STARTED | Self-attention over holds | Medium effort |
@@ -414,7 +415,7 @@ Before creating a new submission, verify ALL of the following:
 
 5. **Can cross-edition generalization be improved?** 2016 → 2017/2019 generalization is the open problem from Petashvili & Rodda (2023). See Section 7.2.
 
-6. **Does deep-mlp with engineered features beat fast-mlp on Protocol v2?** This is the most immediate experiment to run — section features + bigrams are promising but unverified under proper CV.
+6. **Can we improve on deep-mlp with engineered features?** Ablation studies (which features matter most?), try without the ensemble for speed, or combine with tree methods in a super-ensemble.
 
 7. **Can ordinal regression help?** Drummond & Popinga (2021) established grades are fundamentally ordinal/logarithmic. An ordinal loss function may outperform cross-entropy. See Section 7.3.
 
