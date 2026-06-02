@@ -26,6 +26,7 @@ from moonboard_analysis.data.preprocessing import (
     drop_duplicate_sequences,
     preprocess_lstm_data,
 )
+from moonboard_analysis.training.metrics import within_k_accuracy
 from moonboard_analysis.utils.reproducibility import set_seeds
 
 
@@ -167,15 +168,8 @@ def train_and_evaluate(
     total_correct = sum(conf_matrix[i][i] for i in range(num_classes))
     exact_accuracy = total_correct / conf_matrix.sum()
 
-    def _within_k(k: int) -> float:
-        correct = 0
-        for i in range(num_classes):
-            for j in range(max(0, i - k), min(num_classes, i + k + 1)):
-                correct += conf_matrix[i, j]
-        return correct / conf_matrix.sum()
-
-    within_1 = _within_k(1)
-    within_2 = _within_k(2)
+    within_1 = within_k_accuracy(conf_matrix, 1)
+    within_2 = within_k_accuracy(conf_matrix, 2)
 
     macro_f1 = f1_score(y_test_list, y_pred, average='macro', labels=range(num_classes), zero_division=0)
 
@@ -247,15 +241,8 @@ def main() -> None:
     total_correct = sum(conf_matrix[i][i] for i in range(num_classes))
     exact_accuracy = total_correct / conf_matrix.sum()
 
-    def _within_k(k: int) -> float:
-        correct = 0
-        for i in range(num_classes):
-            for j in range(max(0, i - k), min(num_classes, i + k + 1)):
-                correct += conf_matrix[i, j]
-        return correct / conf_matrix.sum()
-
-    within_1 = _within_k(1)
-    within_2 = _within_k(2)
+    within_1 = within_k_accuracy(conf_matrix, 1)
+    within_2 = within_k_accuracy(conf_matrix, 2)
 
     print()
     print("=" * 50)

@@ -34,6 +34,7 @@ from moonboard_analysis.data.preprocessing import (
     drop_duplicate_sequences,
     preprocess_lstm_data,
 )
+from moonboard_analysis.training.metrics import within_k_accuracy
 from moonboard_analysis.utils.reproducibility import set_seeds
 
 NUM_COLS = 11
@@ -179,19 +180,12 @@ def _compute_metrics(y_true: np.ndarray, y_pred: np.ndarray, n_classes: int) -> 
     total_correct = sum(conf_matrix[i][i] for i in range(n_classes))
     exact = total_correct / conf_matrix.sum()
 
-    def _within_k(k: int) -> float:
-        correct = 0
-        for i in range(n_classes):
-            for j in range(max(0, i - k), min(n_classes, i + k + 1)):
-                correct += conf_matrix[i, j]
-        return correct / conf_matrix.sum()
-
     macro_f1 = f1_score(y_true, y_pred, average='macro', labels=range(n_classes), zero_division=0)
 
     return {
         "exact_accuracy": exact,
-        "within_one_grade": _within_k(1),
-        "within_two_grades": _within_k(2),
+        "within_one_grade": within_k_accuracy(conf_matrix, 1),
+        "within_two_grades": within_k_accuracy(conf_matrix, 2),
         "macro_f1": float(macro_f1),
     }
 
@@ -296,20 +290,13 @@ def main() -> None:
     total_correct = sum(conf[i][i] for i in range(n_classes))
     exact = total_correct / conf.sum()
 
-    def _within_k(k: int) -> float:
-        correct = 0
-        for i in range(n_classes):
-            for j in range(max(0, i - k), min(n_classes, i + k + 1)):
-                correct += conf[i, j]
-        return correct / conf.sum()
-
     print()
     print("=" * 50)
     print("Evaluation Results")
     print("=" * 50)
     print(f"Exact Accuracy:      {exact:.4f}")
-    print(f"Within-1 Accuracy:   {_within_k(1):.4f}")
-    print(f"Within-2 Accuracy:   {_within_k(2):.4f}")
+    print(f"Within-1 Accuracy:   {within_k_accuracy(conf, 1):.4f}")
+    print(f"Within-2 Accuracy:   {within_k_accuracy(conf, 2):.4f}")
 
 
 if __name__ == "__main__":
