@@ -276,6 +276,23 @@ All 8 submissions run on the full dataset (25,738 unique routes after deduplicat
 - **Full-data (26K):** 40.17% exact, 65.10% within-1, 83.40% within-2, 14.86% macro-F1
 - **Status:** LSTM is competitive with MLPs when sequences are properly ordered. Bottom-to-top ordering is a simple but effective preprocessing.
 
+### 3.13 Transformer Encoder (transformer-encoder)
+
+- **Commit:** `feat/transformer-encoder` (unmerged as of this writing)
+- **Model:** Compact TransformerEncoder — Embedding(→64) → PositionalEncoding → TransformerEncoder(d_model=64, nhead=2, num_layers=2, ff=128) → MeanPool → Linear(64→12)
+- **Features:** Same bottom-to-top re-ordered token sequences (as Goal 3.12). Vocabulary built per fold.
+- **Training:** Adam, lr=0.001, batch_size=64, epochs=30, ReduceLROnPlateau(factor=0.5, patience=8), early stopping patience=8, CrossEntropyLoss
+- **Key Observations:**
+  - 39.51% exact — competitive with gradient-boost (39.49%) but below bottom-top-lstm (40.17%)
+  - Transformer underperforms LSTM on this data despite self-attention's theoretical advantages
+  - Likely reasons: short sequences don't benefit from long-range attention; small d_model limits capacity; no pretraining
+  - Mean pooling discards positional information after self-attention
+  - Training stable with low variance (±0.87%)
+  - Runs in ~8 min (within time budget)
+- **NOT EXPERIMENTED:** Learned pooling (CLS token), bidirectional LSTM baseline for comparison, pretrained token embeddings, larger d_model, more layers
+- **Full-data (26K):** 39.51% exact, 64.12% within-1, 82.59% within-2, 15.18% macro-F1
+- **Status:** Transformer is functional but doesn't outperform simpler sequence models on this data.
+
 ---
 
 ## 4. Feature Engineering Techniques Tried
