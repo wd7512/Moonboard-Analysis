@@ -17,6 +17,17 @@
       "training_time": "~1 hr"
     },
     {
+      "submission": "focal-loss",
+      "model": "Focal Loss (MLP)",
+      "model_class": "3-layer MLP (198->256->128->12) + FocalLoss(gamma=2.0)",
+      "features": "198-dim binary hold vector, per-fold standardized",
+      "exact_accuracy": {"mean": 0.4073, "std": 0.0071},
+      "within_one_grade": {"mean": 0.6556, "std": 0.0046},
+      "within_two_grades": {"mean": 0.8444, "std": 0.0051},
+      "macro_f1": {"mean": 0.1672, "std": 0.0134},
+      "training_time": "~5 min"
+    },
+    {
       "submission": "fast-mlp",
       "model": "FastMLP",
       "model_class": "3-layer MLP (198->256->128->12)",
@@ -39,6 +50,39 @@
       "training_time": "~5 min"
     },
     {
+      "submission": "bottom-top-lstm",
+      "model": "Bottom-to-Top LSTM",
+      "model_class": "1-layer LSTM (emb=8, hid=64) + bottom-to-top ordering",
+      "features": "Bottom-to-top re-ordered hold token sequences",
+      "exact_accuracy": {"mean": 0.4017, "std": 0.0053},
+      "within_one_grade": {"mean": 0.6510, "std": 0.0044},
+      "within_two_grades": {"mean": 0.8340, "std": 0.0106},
+      "macro_f1": {"mean": 0.1486, "std": 0.0068},
+      "training_time": "~8 min"
+    },
+    {
+      "submission": "class-balanced-loss",
+      "model": "Class-Balanced Loss (MLP)",
+      "model_class": "3-layer MLP (198->256->128->12) + ClassBalancedLoss(beta=0.9)",
+      "features": "198-dim binary hold vector, per-fold standardized",
+      "exact_accuracy": {"mean": 0.3987, "std": 0.0075},
+      "within_one_grade": {"mean": 0.6503, "std": 0.0089},
+      "within_two_grades": {"mean": 0.8352, "std": 0.0048},
+      "macro_f1": {"mean": 0.1872, "std": 0.0104},
+      "training_time": "~5 min"
+    },
+    {
+      "submission": "transformer-encoder",
+      "model": "Transformer Encoder",
+      "model_class": "TransformerEncoder (d_model=64, 2 heads, 2 layers, ff=128)",
+      "features": "Bottom-to-top re-ordered hold token sequences",
+      "exact_accuracy": {"mean": 0.3951, "std": 0.0087},
+      "within_one_grade": {"mean": 0.6412, "std": 0.0101},
+      "within_two_grades": {"mean": 0.8259, "std": 0.0101},
+      "macro_f1": {"mean": 0.1518, "std": 0.0070},
+      "training_time": "~8 min"
+    },
+    {
       "submission": "gradient-boost-baseline",
       "model": "Gradient Boost",
       "model_class": "VotingClassifier (RF + HistGB)",
@@ -50,6 +94,17 @@
       "training_time": "~5 min"
     },
     {
+      "submission": "multichannel-2dcnn",
+      "model": "Multi-Channel 2DCNN",
+      "model_class": "3-layer 2D CNN (3->16->16->32, 3x3 kernels)",
+      "features": "3x18x11 binary hold matrix (start/middle/end channels)",
+      "exact_accuracy": {"mean": 0.3931, "std": 0.0070},
+      "within_one_grade": {"mean": 0.6241, "std": 0.0094},
+      "within_two_grades": {"mean": 0.8120, "std": 0.0065},
+      "macro_f1": {"mean": 0.1417, "std": 0.0022},
+      "training_time": "~3 min"
+    },
+    {
       "submission": "tree-baseline",
       "model": "Random Forest",
       "model_class": "Random Forest (200 trees)",
@@ -59,6 +114,17 @@
       "within_two_grades": {"mean": 0.8077, "std": 0.0045},
       "macro_f1": {"mean": 0.1750, "std": 0.0061},
       "training_time": "~2 min"
+    },
+    {
+      "submission": "ordinal-regression",
+      "model": "CORAL Ordinal Regression",
+      "model_class": "3-layer MLP + CORAL head (K-1 binary thresholds)",
+      "features": "198-dim binary hold vector, per-fold standardized",
+      "exact_accuracy": {"mean": 0.3702, "std": 0.0081},
+      "within_one_grade": {"mean": 0.6816, "std": 0.0056},
+      "within_two_grades": {"mean": 0.8723, "std": 0.0024},
+      "macro_f1": {"mean": 0.1819, "std": 0.0076},
+      "training_time": "~5 min"
     },
     {
       "submission": "lstm-baseline",
