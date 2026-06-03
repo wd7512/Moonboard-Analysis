@@ -154,14 +154,21 @@ class TransformerGradePredictor(nn.Module):
         self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
         self.classifier = nn.Linear(d_model, num_classes)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, mask: torch.Tensor | None = None) -> torch.Tensor:
         # x: (batch, seq_len) — token ids
+        # mask: (batch, seq_len) — True for padded positions (optional)
         x = self.embedding(x)  # (batch, seq_len, d_model)
         x = self.pos_encoder(x)
-        # TransformerEncoder — no mask to avoid MPS incompatibility
         x = self.transformer(x)
-        # Mean pooling over sequence
-        x = x.mean(dim=1)
+        # Masked mean pooling: ignore padded positions
+        if mask is not None:
+            # Expand mask to d_model dims, zero out padded positions
+            mask_exp = mask.unsqueeze(-1).float()  # (batch, seq_len, 1)
+            x = x * (1.0 - mask_exp)  # zero out padding
+            lengths = (1.0 - mask_exp[:, :, 0]).sum(dim=1, keepdim=True)  # (batch, 1)
+            x = x.sum(dim=1) / lengths.clamp(min=1)
+        else:
+            x = x.mean(dim=1)
         return self.classifier(x)
 
 
@@ -201,12 +208,15 @@ def build_vocab(sequences: list[list[str]]) -> dict[str, int]:
     return vocab
 
 
-def collate_fn(batch: list[tuple[torch.Tensor, int]]) -> tuple[torch.Tensor, torch.Tensor]:
-    """Collate without padding mask (MPS compatibility)."""
+def collate_fn(
+    batch: list[tuple[torch.Tensor, int]],
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Collate with padding mask for masked mean pooling."""
     seqs, labels = zip(*batch)
     seqs = torch.stack(seqs)
     labels = torch.tensor(labels, dtype=torch.long)
-    return seqs, labels
+    mask = seqs == 0  # True for padded positions
+    return seqs, mask, labels
 
 
 def train_and_evaluate(
@@ -248,7 +258,7 @@ def train_and_evaluate(
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
     test_loader = DataLoader(test_ds, batch_size=batch_size * 2, collate_fn=collate_fn)
 
-    device = get_device()
+    dev = get_device()
     model = TransformerGradePredictor(
         vocab_size=vocab_size,
         d_model=d_model,
@@ -257,7 +267,7 @@ def train_and_evaluate(
         dim_feedforward=dim_feedforward,
         num_classes=NUM_CLASSES,
         max_len=max_length,
-    ).to(device)
+    ).to(dev)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
@@ -271,10 +281,10 @@ def train_and_evaluate(
 
     for epoch in range(epochs):
         model.train()
-        for seqs, lbls in train_loader:
-            seqs, lbls = seqs.to(device), lbls.to(device)
+        for seqs, mask, lbls in train_loader:
+            seqs, mask, lbls = seqs.to(dev), mask.to(dev), lbls.to(dev)
             optimizer.zero_grad()
-            loss = criterion(model(seqs), lbls)
+            loss = criterion(model(seqs, mask), lbls)
             loss.backward()
             optimizer.step()
 
@@ -282,9 +292,9 @@ def train_and_evaluate(
         test_loss = 0.0
         n_batches = 0
         with torch.no_grad():
-            for seqs, lbls in test_loader:
-                seqs, lbls = seqs.to(device), lbls.to(device)
-                test_loss += criterion(model(seqs), lbls).item()
+            for seqs, mask, lbls in test_loader:
+                seqs, mask, lbls = seqs.to(dev), mask.to(dev), lbls.to(dev)
+                test_loss += criterion(model(seqs, mask), lbls).item()
                 n_batches += 1
         test_loss /= max(n_batches, 1)
         scheduler.step(test_loss)
@@ -299,16 +309,16 @@ def train_and_evaluate(
 
     if best_state is not None:
         model.load_state_dict(best_state)
-        model.to(device)
+        model.to(dev)
 
     all_preds, all_labels = [], []
     model.eval()
     with torch.no_grad():
-        for seqs_in, lbls_in in test_loader:
-            seqs_in = seqs_in.to(device)
-            preds = torch.argmax(model(seqs_in), 1)
+        for seqs, mask, _ in test_loader:
+            seqs, mask = seqs.to(dev), mask.to(dev)
+            preds = torch.argmax(model(seqs, mask), 1)
             all_preds.extend(preds.cpu().numpy().tolist())
-            all_labels.extend(lbls_in.numpy().tolist())
+            all_labels.extend(y_test.tolist())
 
     metrics = evaluate_classification(all_labels, all_preds, NUM_CLASSES)
     return extract_required_metrics(metrics)

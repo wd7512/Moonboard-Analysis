@@ -193,7 +193,8 @@ def train_and_evaluate(
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_ds, batch_size=batch_size * 2)
 
-    model = FastMLP(HOLD_VECTOR_DIM, hidden_dim, NUM_CLASSES, dropout).to(device)
+    dev = get_device()
+    model = FastMLP(HOLD_VECTOR_DIM, hidden_dim, NUM_CLASSES, dropout).to(dev)
     criterion = FocalLoss(gamma=2.0)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -208,7 +209,7 @@ def train_and_evaluate(
         # Train
         model.train()
         for xb, yb in train_loader:
-            xb, yb = xb.to(device), yb.to(device)
+            xb, yb = xb.to(dev), yb.to(dev)
             optimizer.zero_grad()
             loss = criterion(model(xb), yb)
             loss.backward()
@@ -220,7 +221,7 @@ def train_and_evaluate(
         n_batches = 0
         with torch.no_grad():
             for xb, yb in test_loader:
-                xb, yb = xb.to(device), yb.to(device)
+                xb, yb = xb.to(dev), yb.to(dev)
                 test_loss += criterion(model(xb), yb).item()
                 n_batches += 1
         test_loss /= max(n_batches, 1)
@@ -237,14 +238,14 @@ def train_and_evaluate(
     # Load best checkpoint
     if best_state is not None:
         model.load_state_dict(best_state)
-        model.to(device)
+        model.to(dev)
 
     # Extract predictions
     all_preds, all_labels = [], []
     model.eval()
     with torch.no_grad():
         for xb, yb in test_loader:
-            xb = xb.to(device)
+            xb = xb.to(dev)
             preds = torch.argmax(model(xb), 1)
             all_preds.extend(preds.cpu().numpy().tolist())
             all_labels.extend(yb.numpy().tolist())
