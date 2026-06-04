@@ -55,6 +55,7 @@ All results below use 5-fold stratified CV with retrain-per-fold on the full dat
 All 8 submissions run on the full dataset (25,738 unique routes after deduplication and preprocessing). Within-metrics use the corrected (bug-fixed) calculation.
 
 <!-- LEADERBOARD-FULLDATA-START -->
+
 | # | Submission | Exact (%) | ±1 (%) | ±2 (%) | Macro-F1 (%) | Training Time |
 |---|-----------|-----------|--------|--------|--------------|---------------|
 | 1 | deep-mlp-baseline | **40.76** (±0.62) | 65.46 (±0.55) | 84.49 (±0.53) | 16.99 (±0.32) | ~1 hr |
@@ -71,6 +72,7 @@ All 8 submissions run on the full dataset (25,738 unique routes after deduplicat
 | 12 | ordinal-regression | **37.02** (±0.81) | 68.16 (±0.56) | 87.23 (±0.24) | **18.19** (±0.76) | ~5 min |
 | 13 | 2dcnn-baseline | **36.81** (±5.30) | 60.66 (±5.89) | 79.99 (±4.91) | 14.24 (±1.14) | ~45 min |
 | 14 | ridge-baseline | **23.94** (±0.64) | 63.63 (±0.55) | 86.30 (±0.25) | 12.90 (±0.38) | ~1 min |
+
 <!-- LEADERBOARD-FULLDATA-END -->
 
 > Full-data results use the complete ~26K route dataset with the corrected within-metric calculation (Protocol v2, bug-fixed).

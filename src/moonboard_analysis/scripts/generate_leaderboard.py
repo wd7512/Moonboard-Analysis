@@ -94,7 +94,7 @@ def replace_between_markers(
     before = content[: content.index(start_marker) + len(start_marker)]
     after_start = content[content.index(start_marker) + len(start_marker) :]
     after = after_start[after_start.index(end_marker) :]
-    return before + "\n" + table + "\n" + after
+    return before + "\n\n" + table + "\n\n" + after
 
 
 def _resolve_path(relative_path: str) -> Path:
