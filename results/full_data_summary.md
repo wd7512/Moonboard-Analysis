@@ -10,7 +10,7 @@ Results are mean +/- std across 5 stratified folds on the full dataset (25,738 u
 | FastMLP | 40.50 ± 0.50 | 64.89 ± 0.69 | 83.69 ± 0.73 | 15.44 ± 0.82 |
 | Perceptron (MLP) | 40.18 ± 0.51 | 65.67 ± 0.93 | 84.80 ± 0.82 | 17.29 ± 0.42 |
 | Bottom-to-Top LSTM | 40.17 ± 0.53 | 65.10 ± 0.44 | 83.40 ± 1.06 | 14.86 ± 0.68 |
-| Class-Balanced Loss (MLP) | 39.87 ± 0.75 | 65.03 ± 0.89 | 83.52 ± 0.48 | 18.72 ± 1.04 |
+| Class-Balanced Loss (MLP) | 39.70 ± 0.90 | 64.26 ± 0.76 | 83.14 ± 0.96 | 17.98 ± 1.21 |
 | Transformer Encoder | 39.51 ± 0.87 | 64.12 ± 1.01 | 82.59 ± 1.01 | 15.18 ± 0.70 |
 | Gradient Boost | 39.49 ± 0.48 | 62.20 ± 0.44 | 80.78 ± 0.31 | 16.69 ± 0.45 |
 | Multi-Channel 2DCNN | 39.31 ± 0.70 | 62.41 ± 0.94 | 81.20 ± 0.65 | 14.17 ± 0.22 |
