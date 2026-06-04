@@ -17,6 +17,7 @@ Usage:
 import argparse
 import sys
 import time
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -148,6 +149,12 @@ class ClassBalancedLoss(nn.Module):
             weights = _compute_class_weights(class_counts, num_classes, beta)
             self.register_buffer("weights", weights)
         else:
+            warnings.warn(
+                "ClassBalancedLoss created without class_counts — "
+                "falling back to unweighted cross-entropy. Pass class_counts "
+                "from np.bincount(y_train) for actual class-balanced loss.",
+                stacklevel=2,
+            )
             self.weights = None
 
     def forward(self, inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
