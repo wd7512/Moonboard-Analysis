@@ -24,7 +24,7 @@ from sklearn.linear_model import Ridge
 from sklearn.model_selection import train_test_split
 
 from moonboard_analysis.config import GRADE_ORDER
-from moonboard_analysis.data.grid_mapping import GridMapper
+from moonboard_analysis.data.grid_mapping import GridMapper, detect_grid_setup
 from moonboard_analysis.data.loader import load_lstm_data
 from moonboard_analysis.data.preprocessing import (
     drop_duplicate_sequences,
@@ -68,7 +68,7 @@ def parse_args() -> argparse.Namespace:
 def sequences_to_grids(
     sequences: list[list[str]],
 ) -> tuple[list[np.ndarray], list[int]]:
-    mapper = GridMapper()
+    mapper = GridMapper(setup=detect_grid_setup(sequences))
     features: list[np.ndarray] = []
     labels: list[int] = []
 

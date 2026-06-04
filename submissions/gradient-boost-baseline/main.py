@@ -28,7 +28,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 
 from moonboard_analysis.config import GRADE_ORDER
-from moonboard_analysis.data.grid_mapping import GridMapper
+from moonboard_analysis.data.grid_mapping import GridMapper, detect_grid_setup
 from moonboard_analysis.data.loader import load_lstm_data
 from moonboard_analysis.data.preprocessing import (
     drop_duplicate_sequences,
@@ -125,7 +125,7 @@ def compute_additional_features(sequences: list[list[str]]) -> np.ndarray:
 
 def build_feature_matrix(sequences: list[list[str]]) -> np.ndarray:
     """Build 164-dim grid-based hold features for each route."""
-    mapper = GridMapper()
+    mapper = GridMapper(setup=detect_grid_setup(sequences))
     all_vecs: list[np.ndarray] = []
 
     for seq in sequences:
