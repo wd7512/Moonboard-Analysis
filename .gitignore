@@ -183,6 +183,9 @@ mlruns/
 results_*.json
 results_*.md
 
+# Hermes agent project config
+.hermes/
+
 # Model weights (code-only submission policy)
 *.pth
 *.joblib
