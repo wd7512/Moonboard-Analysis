@@ -39,11 +39,16 @@ class TestComputeClassWeights:
         assert torch.allclose(weights, torch.tensor(expected))
 
     def test_beta_one_handles_gracefully(self):
-        """Beta=1.0 → weights are inverse class frequency (1/count)."""
+        """Beta=1: produces inverse class frequency weights (1/count).
+
+        Per Cui et al. CVPR 2019, when beta -> 1, effective number En -> n,
+        so weights are 1/n_y for non-zero counts.
+        """
         counts = np.array([0, 1, 2, 3])
         weights = compute_class_weights(counts, 4, beta=1.0)
-        expected = [0.0, 1.0, 0.5, 1.0 / 3.0]
-        assert torch.allclose(weights, torch.tensor(expected))
+        assert weights[0] == 0.0
+        expected = torch.tensor([0.0, 1.0 / 1, 1.0 / 2, 1.0 / 3], dtype=torch.float32)
+        assert torch.allclose(weights, expected)
 
     def test_empty_counts_all_zeros(self):
         """All zero counts → all weights are 0.0."""
@@ -110,26 +115,14 @@ class TestComputeClassWeights:
         assert pytest.approx(weights.item(), rel=1e-4) == (1 - beta)
 
     def test_output_shape_when_counts_shorter_than_num_classes(self):
-        """Passing len(counts) < num_classes should pad to num_classes."""
+        """Passing len(counts) < num_classes pads to num_classes."""
         counts = np.array([1, 2, 3])
         weights = compute_class_weights(counts, num_classes=5, beta=0.9)
         assert weights.shape == (5,)
 
-    @pytest.mark.parametrize(
-        "counts, num_classes",
-        [
-            (np.array([1, 2, 3, 4, 5]), 5),
-            (np.array([1, 2, 3, 4, 5]), 6),
-        ],
-    )
-    def test_output_shape(self, counts, num_classes, beta=0.9):
-        """Output always has shape (num_classes,) regardless of beta."""
-        weights = compute_class_weights(counts, num_classes, beta=beta)
-        assert weights.shape == (num_classes,)
-
     @pytest.mark.parametrize("beta", [0.0, 0.5, 0.9, 0.99, 0.999, 1.0])
-    def test_output_shape_all_betas(self, beta):
-        """Output always has shape (num_classes,) for all beta values."""
+    def test_output_shape(self, beta):
+        """Output always has shape (num_classes,) regardless of beta."""
         counts = np.array([1, 2, 3, 4, 5])
         weights = compute_class_weights(counts, 5, beta=beta)
         assert weights.shape == (5,)

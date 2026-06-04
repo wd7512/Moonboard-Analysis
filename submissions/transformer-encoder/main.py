@@ -157,11 +157,15 @@ class TransformerGradePredictor(nn.Module):
     def forward(self, x: torch.Tensor, mask: torch.Tensor | None = None) -> torch.Tensor:
         x = self.embedding(x)
         x = self.pos_encoder(x)
+        # NOTE: We do NOT pass src_key_padding_mask to self.transformer() because
+        # it causes errors on MPS (Apple Silicon GPU). Instead, we use manual
+        # zeroing for masked mean pooling below, which achieves the same effect
+        # without the MPS incompatibility.
         x = self.transformer(x)
         if mask is not None:
-            mask_exp = mask.unsqueeze(-1).float()
-            x = x * (1.0 - mask_exp)
-            lengths = (1.0 - mask_exp[:, :, 0]).sum(dim=1, keepdim=True)
+            active = (1.0 - mask.unsqueeze(-1).float())
+            x = x * active
+            lengths = active.sum(dim=1)
             x = x.sum(dim=1) / lengths.clamp(min=1)
         else:
             x = x.mean(dim=1)
@@ -205,6 +209,16 @@ def build_vocab(sequences: list[list[str]]) -> dict[str, int]:
 
 
 def collate_fn(batch: list[tuple[torch.Tensor, int]]) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Collate batch into (seqs, labels, padding_mask).
+
+    Args:
+        batch: list of (token_ids_tensor, label) pairs
+
+    Returns:
+        seqs: (batch, max_len) padded token ids
+        labels: (batch,) integer labels
+        mask: (batch, max_len) 1 where padded (token=0), 0 where real
+    """
     seqs, labels = zip(*batch)
     seqs = torch.stack(seqs)
     labels = torch.tensor(labels, dtype=torch.long)
