@@ -154,14 +154,17 @@ class TransformerGradePredictor(nn.Module):
         self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
         self.classifier = nn.Linear(d_model, num_classes)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # x: (batch, seq_len) — token ids
-        x = self.embedding(x)  # (batch, seq_len, d_model)
+    def forward(self, x: torch.Tensor, mask: torch.Tensor | None = None) -> torch.Tensor:
+        x = self.embedding(x)
         x = self.pos_encoder(x)
-        # TransformerEncoder — no mask to avoid MPS incompatibility
         x = self.transformer(x)
-        # Mean pooling over sequence
-        x = x.mean(dim=1)
+        if mask is not None:
+            mask_exp = mask.unsqueeze(-1).float()
+            x = x * (1.0 - mask_exp)
+            lengths = (1.0 - mask_exp[:, :, 0]).sum(dim=1, keepdim=True)
+            x = x.sum(dim=1) / lengths.clamp(min=1)
+        else:
+            x = x.mean(dim=1)
         return self.classifier(x)
 
 
@@ -201,12 +204,12 @@ def build_vocab(sequences: list[list[str]]) -> dict[str, int]:
     return vocab
 
 
-def collate_fn(batch: list[tuple[torch.Tensor, int]]) -> tuple[torch.Tensor, torch.Tensor]:
-    """Collate without padding mask (MPS compatibility)."""
+def collate_fn(batch: list[tuple[torch.Tensor, int]]) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     seqs, labels = zip(*batch)
     seqs = torch.stack(seqs)
     labels = torch.tensor(labels, dtype=torch.long)
-    return seqs, labels
+    mask = (seqs == 0).long()
+    return seqs, labels, mask
 
 
 def train_and_evaluate(
@@ -271,10 +274,10 @@ def train_and_evaluate(
 
     for epoch in range(epochs):
         model.train()
-        for seqs, lbls in train_loader:
-            seqs, lbls = seqs.to(device), lbls.to(device)
+        for seqs, lbls, mask in train_loader:
+            seqs, lbls, mask = seqs.to(device), lbls.to(device), mask.to(device)
             optimizer.zero_grad()
-            loss = criterion(model(seqs), lbls)
+            loss = criterion(model(seqs, mask), lbls)
             loss.backward()
             optimizer.step()
 
@@ -282,9 +285,9 @@ def train_and_evaluate(
         test_loss = 0.0
         n_batches = 0
         with torch.no_grad():
-            for seqs, lbls in test_loader:
-                seqs, lbls = seqs.to(device), lbls.to(device)
-                test_loss += criterion(model(seqs), lbls).item()
+            for seqs, lbls, mask in test_loader:
+                seqs, lbls, mask = seqs.to(device), lbls.to(device), mask.to(device)
+                test_loss += criterion(model(seqs, mask), lbls).item()
                 n_batches += 1
         test_loss /= max(n_batches, 1)
         scheduler.step(test_loss)
@@ -304,9 +307,9 @@ def train_and_evaluate(
     all_preds, all_labels = [], []
     model.eval()
     with torch.no_grad():
-        for seqs_in, lbls_in in test_loader:
-            seqs_in = seqs_in.to(device)
-            preds = torch.argmax(model(seqs_in), 1)
+        for seqs_in, lbls_in, mask_in in test_loader:
+            seqs_in, mask_in = seqs_in.to(device), mask_in.to(device)
+            preds = torch.argmax(model(seqs_in, mask_in), 1)
             all_preds.extend(preds.cpu().numpy().tolist())
             all_labels.extend(lbls_in.numpy().tolist())
 
