@@ -104,20 +104,20 @@ device = torch.device("cpu")
 BETA = 0.999
 
 
-def _compute_class_weights(labels: np.ndarray, num_classes: int, beta: float) -> torch.Tensor:
+def _compute_class_weights(counts: np.ndarray, num_classes: int, beta: float) -> torch.Tensor:
     """Compute class-balanced weights from effective number of samples.
 
     w_y = (1 - β) / (1 - β^{n_y})
 
     Args:
-        labels: Integer class labels for the training set.
+        counts: Pre-computed class counts (e.g. from np.bincount(y_train)).
         num_classes: Number of classes.
         beta: Hyperparameter controlling how quickly effective number grows.
 
     Returns:
         Float tensor of shape (num_classes,) with class weights.
     """
-    counts = np.bincount(labels, minlength=num_classes).astype(np.float64)
+    counts = counts.astype(np.float64)
     # Avoid division by zero: β^0 = 1 → 0/0 for classes with no samples
     weights = np.divide(
         1.0 - beta,
@@ -230,7 +230,7 @@ def train_and_evaluate(
     class_counts = np.bincount(y_train, minlength=NUM_CLASSES)
     criterion = ClassBalancedLoss(
         beta=BETA, num_classes=NUM_CLASSES, class_counts=class_counts
-    )
+    ).to(dev)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode="min", factor=0.5, patience=10
