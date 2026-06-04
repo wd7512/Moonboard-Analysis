@@ -132,27 +132,34 @@ class ClassBalancedLoss(nn.Module):
     """Class-Balanced Loss based on Effective Number of Samples.
 
     Cui et al., CVPR 2019. Uses per-class weights (1-β)/(1-β^{n_y})
-    applied to standard cross-entropy.
+    computed from the FULL training set, applied to weighted cross-entropy.
     """
 
-    def __init__(self, beta: float = 0.99, num_classes: int = 12, reduction: str = "mean"):
+    def __init__(
+        self,
+        beta: float = 0.99,
+        num_classes: int = 12,
+        reduction: str = "mean",
+        class_counts: np.ndarray | None = None,
+    ):
         super().__init__()
-        self.beta = beta
-        self.num_classes = num_classes
         self.reduction = reduction
+        if class_counts is not None:
+            weights = _compute_class_weights(class_counts, num_classes, beta)
+            self.register_buffer("weights", weights)
+        else:
+            self.weights = None
 
     def forward(self, inputs: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        weights = _compute_class_weights(
-            targets.detach().cpu().numpy(), self.num_classes, self.beta
-        ).to(inputs.device)
         ce_loss = F.cross_entropy(inputs, targets, reduction="none")
-        weight_per_sample = weights[targets]
-        cb_loss = weight_per_sample * ce_loss
+        if self.weights is not None:
+            weight_per_sample = self.weights[targets]
+            ce_loss = weight_per_sample * ce_loss
         if self.reduction == "mean":
-            return cb_loss.mean()
+            return ce_loss.mean()
         elif self.reduction == "sum":
-            return cb_loss.sum()
-        return cb_loss
+            return ce_loss.sum()
+        return ce_loss
 
 
 def parse_args():
@@ -218,8 +225,12 @@ def train_and_evaluate(
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_ds, batch_size=batch_size * 2)
 
-    model = FastMLP(HOLD_VECTOR_DIM, hidden_dim, NUM_CLASSES, dropout).to(device)
-    criterion = ClassBalancedLoss(beta=BETA, num_classes=NUM_CLASSES)
+    dev = get_device()
+    model = FastMLP(HOLD_VECTOR_DIM, hidden_dim, NUM_CLASSES, dropout).to(dev)
+    class_counts = np.bincount(y_train, minlength=NUM_CLASSES)
+    criterion = ClassBalancedLoss(
+        beta=BETA, num_classes=NUM_CLASSES, class_counts=class_counts
+    )
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode="min", factor=0.5, patience=10
@@ -233,7 +244,7 @@ def train_and_evaluate(
         # Train
         model.train()
         for xb, yb in train_loader:
-            xb, yb = xb.to(device), yb.to(device)
+            xb, yb = xb.to(dev), yb.to(dev)
             optimizer.zero_grad()
             loss = criterion(model(xb), yb)
             loss.backward()
@@ -245,7 +256,7 @@ def train_and_evaluate(
         n_batches = 0
         with torch.no_grad():
             for xb, yb in test_loader:
-                xb, yb = xb.to(device), yb.to(device)
+                xb, yb = xb.to(dev), yb.to(dev)
                 test_loss += criterion(model(xb), yb).item()
                 n_batches += 1
         test_loss /= max(n_batches, 1)
@@ -262,14 +273,14 @@ def train_and_evaluate(
     # Load best checkpoint
     if best_state is not None:
         model.load_state_dict(best_state)
-        model.to(device)
+        model.to(dev)
 
     # Extract predictions
     all_preds, all_labels = [], []
     model.eval()
     with torch.no_grad():
         for xb, yb in test_loader:
-            xb = xb.to(device)
+            xb = xb.to(dev)
             preds = torch.argmax(model(xb), 1)
             all_preds.extend(preds.cpu().numpy().tolist())
             all_labels.extend(yb.numpy().tolist())
