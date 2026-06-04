@@ -24,6 +24,8 @@ _spec.loader.exec_module(_cbl)
 compute_class_weights = _cbl._compute_class_weights
 ClassBalancedLoss = _cbl.ClassBalancedLoss
 
+torch.manual_seed(42)
+
 
 class TestComputeClassWeights:
     """Tests for _compute_class_weights()."""
@@ -112,6 +114,16 @@ class TestComputeClassWeights:
         weights = compute_class_weights(counts, 1, beta=beta)
         assert pytest.approx(weights.item(), rel=1e-4) == (1 - beta)
 
+    @pytest.mark.xfail(
+        strict=True,
+        reason="_compute_class_weights ignores num_classes — dead code bug in main.py",
+    )
+    def test_output_shape_when_counts_shorter_than_num_classes(self):
+        """Passing len(counts) < num_classes should pad to num_classes — currently fails."""
+        counts = np.array([1, 2, 3])
+        weights = compute_class_weights(counts, num_classes=5, beta=0.9)
+        assert weights.shape == (5,)
+
     @pytest.mark.parametrize("beta", [0.0, 0.5, 0.9, 0.99, 0.999, 1.0])
     def test_output_shape(self, beta):
         """Output always has shape (num_classes,) regardless of beta."""
@@ -154,8 +166,11 @@ class TestClassBalancedLoss:
 
     @pytest.mark.parametrize("reduction", ["mean", "sum", "none"])
     def test_all_reductions(self, reduction):
-        """All three reduction modes return correct shapes."""
+        """All three reduction modes return correct shapes and numerical values."""
         counts = np.array([5, 5])
+        loss_fn_none = ClassBalancedLoss(
+            beta=0.9, num_classes=2, class_counts=counts, reduction="none"
+        )
         loss_fn = ClassBalancedLoss(
             beta=0.9, num_classes=2, class_counts=counts, reduction=reduction
         )
@@ -166,6 +181,11 @@ class TestClassBalancedLoss:
             assert loss.shape == (4,)
         else:
             assert loss.ndim == 0
+        none_loss = loss_fn_none(inputs, targets)
+        if reduction == "mean":
+            assert torch.allclose(loss, none_loss.mean())
+        elif reduction == "sum":
+            assert torch.allclose(loss, none_loss.sum())
 
     def test_reduction_none_differentiable(self):
         """Per-sample loss from reduction='none' requires grad on inputs."""
