@@ -145,8 +145,8 @@ class TestReplaceBetweenMarkers:
             "new stuff",
         )
         assert result == (
-            "header\n<!-- LEADERBOARD-START -->\n"
-            "new stuff\n<!-- LEADERBOARD-END -->\nfooter"
+            "header\n<!-- LEADERBOARD-START -->\n\n"
+            "new stuff\n\n<!-- LEADERBOARD-END -->\nfooter"
         )
 
 
@@ -194,7 +194,7 @@ class TestCheckDetectsOutdated:
         md_path = tmp_path / "test.md"
         table = generate_simple_table(MOCK_ENTRIES)
         md_path.write_text(
-            f"<!-- LEADERBOARD-START -->\n{table}\n<!-- LEADERBOARD-END -->\n"
+            f"<!-- LEADERBOARD-START -->\n\n{table}\n\n<!-- LEADERBOARD-END -->\n"
         )
         target = {
             str(md_path): (
