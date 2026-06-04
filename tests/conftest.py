@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from moonboard_analysis.config import AutoencoderConfig, LSTMConfig
+from moonboard_analysis.config import GRADE_ORDER, AutoencoderConfig, LSTMConfig
 from moonboard_analysis.models.autoencoder import Autoencoder
 from moonboard_analysis.models.lstm import ClimbingGradePredictor
 
@@ -93,7 +93,7 @@ def mock_lstm(lstm_config: LSTMConfig) -> ClimbingGradePredictor:
         embed_dim=lstm_config.embed_dim,
         hidden_dim=lstm_config.hidden_dim,
         num_layers=lstm_config.num_layers,
-        num_classes=12,
+        num_classes=len(GRADE_ORDER),
     )
 
 

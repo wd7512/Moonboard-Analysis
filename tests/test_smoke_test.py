@@ -5,23 +5,24 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from moonboard_analysis.config import GRADE_ORDER
 from moonboard_analysis.scripts.smoke_test import stratified_sample
 
 
 class TestStratifiedSample:
     def test_preserves_total_samples(self):
         sequences = [[f"tok{i}"] for i in range(200)]
-        grades = [i % 12 for i in range(200)]
+        grades = [i % len(GRADE_ORDER) for i in range(200)]
         sampled_seqs, sampled_grades = stratified_sample(sequences, grades, 100, seed=42)
         assert len(sampled_seqs) == len(sampled_grades)
-        assert abs(len(sampled_seqs) - 100) <= 12
+        assert abs(len(sampled_seqs) - 100) <= len(GRADE_ORDER)
 
     def test_preserves_grade_distribution(self):
         sequences = [[f"tok{i}"] for i in range(240)]
-        grades = [i % 12 for i in range(240)]
+        grades = [i % len(GRADE_ORDER) for i in range(240)]
         _, sampled_grades = stratified_sample(sequences, grades, 120, seed=42)
         unique, counts = np.unique(sampled_grades, return_counts=True)
-        assert len(unique) == 12
+        assert len(unique) == len(GRADE_ORDER)
         assert all(abs(c - 10) <= 1 for c in counts)
 
     def test_handles_small_dataset(self):
@@ -33,14 +34,14 @@ class TestStratifiedSample:
 
     def test_deterministic_with_seed(self):
         sequences = [[f"tok{i}"] for i in range(200)]
-        grades = [i % 12 for i in range(200)]
+        grades = [i % len(GRADE_ORDER) for i in range(200)]
         _, g1 = stratified_sample(sequences, grades, 100, seed=42)
         _, g2 = stratified_sample(sequences, grades, 100, seed=42)
         assert g1 == g2
 
     def test_different_seed_different_sample(self):
         sequences = [[f"tok{i}"] for i in range(200)]
-        grades = [i % 12 for i in range(200)]
+        grades = [i % len(GRADE_ORDER) for i in range(200)]
         _, g1 = stratified_sample(sequences, grades, 100, seed=42)
         _, g2 = stratified_sample(sequences, grades, 100, seed=99)
         assert g1 != g2

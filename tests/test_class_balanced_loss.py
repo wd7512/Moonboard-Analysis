@@ -11,6 +11,8 @@ import numpy as np
 import pytest
 import torch
 
+from moonboard_analysis.config import GRADE_ORDER
+
 _module_path = (
     Path(__file__).resolve().parent.parent
     / "submissions"
@@ -260,11 +262,11 @@ class TestClassBalancedLoss:
         loss = loss_fn(logits, targets)
         assert loss[1] > loss[0], "Minority class should have higher loss"
 
-    def test_default_num_classes_is_12(self):
-        """Default num_classes = 12 (from GRADE_ORDER)."""
-        counts = np.array([5] * 12)
+    def test_default_num_classes_matches_grade_order(self):
+        """Default num_classes matches len(GRADE_ORDER)."""
+        counts = np.array([5] * len(GRADE_ORDER))
         loss_fn = ClassBalancedLoss(beta=0.99, class_counts=counts)
-        assert loss_fn.weights.shape == (12,)
+        assert loss_fn.weights.shape == (len(GRADE_ORDER),)
 
     def test_default_beta_is_0_99(self):
         """Default beta = 0.99."""
