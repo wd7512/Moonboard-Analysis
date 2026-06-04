@@ -119,13 +119,26 @@ def _compute_class_weights(counts: np.ndarray, num_classes: int, beta: float) ->
         Float tensor of shape (num_classes,) with class weights.
     """
     counts = counts.astype(np.float64)
-    # Avoid division by zero: β^0 = 1 → 0/0 for classes with no samples
-    weights = np.divide(
-        1.0 - beta,
-        1.0 - np.power(beta, counts),
-        where=counts > 0,
-        out=np.full_like(counts, 0.0, dtype=np.float64),
-    )
+    # Ensure output has exactly num_classes elements
+    if len(counts) < num_classes:
+        counts = np.pad(counts, (0, num_classes - len(counts)), constant_values=0)
+    elif len(counts) > num_classes:
+        counts = counts[:num_classes]
+    if beta == 1.0:
+        # Special case: weights are inverse class frequency (1/n_y)
+        weights = np.divide(
+            1.0, counts,
+            where=counts > 0,
+            out=np.zeros_like(counts, dtype=np.float64),
+        )
+    else:
+        # Avoid division by zero: β^0 = 1 → 0/0 for classes with no samples
+        weights = np.divide(
+            1.0 - beta,
+            1.0 - np.power(beta, counts),
+            where=counts > 0,
+            out=np.full_like(counts, 0.0, dtype=np.float64),
+        )
     return torch.tensor(weights, dtype=torch.float32)
 
 
