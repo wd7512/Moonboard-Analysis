@@ -210,6 +210,10 @@ def main() -> None:
     if args.write:
         LEADERBOARD_PATH.write_text(json.dumps(board, indent=2) + "\n")
         print(f"Wrote {LEADERBOARD_PATH}")
+    elif args.check:
+        print("Dry-run: leaderboard would be written to disk. Pass --write to apply.")
+    else:
+        print("Pass --write to write leaderboard.json or --check for dry-run.")
 
     # Print summary
     for ds_name, ds_data in board["datasets"].items():

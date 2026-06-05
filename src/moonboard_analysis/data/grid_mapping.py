@@ -220,7 +220,7 @@ class GridMapper:
             raise ValueError(msg)
 
         if self.setup == "master2017":
-            return grid.flatten().copy()
+            return grid.flatten()
 
         condensed = self._condense(grid)
         flat = condensed.flatten()
