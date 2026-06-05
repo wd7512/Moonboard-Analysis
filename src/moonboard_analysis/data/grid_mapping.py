@@ -27,12 +27,9 @@ def detect_grid_setup(sequences: list[list[str]]) -> str:
     """
     for seq in sequences:
         for token in seq:
-            if token and len(token) >= 2 and token[0].isalpha():
-                try:
-                    if int(token[1:]) == 1:
-                        return "master2017"
-                except ValueError:
-                    continue
+            if len(token) >= 2 and token[0].isalpha() and token[1:].isdigit():
+                if int(token[1:]) == 1:
+                    return "master2017"
     return "2016"
 
 
@@ -78,6 +75,7 @@ class GridMapper:
         self.NULL_HOLDS = self._NULL_HOLDS[setup]
         if setup not in self._insert_indices:
             self._insert_indices[setup] = self._compute_insert_indices()
+        self._insert_set = set(self._insert_indices[setup])
 
     @staticmethod
     def _convert_key(key: str) -> tuple[int, int]:
@@ -187,11 +185,10 @@ class GridMapper:
             msg = f"Expected 1D array with {expected_dim} elements, got shape {vec.shape}"
             raise ValueError(msg)
 
-        insert_set = set(insert_indices)
         full = np.zeros(22 * 11, dtype=vec.dtype)
         vec_idx = 0
         for i in range(22 * 11):
-            if i in insert_set:
+            if i in self._insert_set:
                 full[i] = 0
             else:
                 full[i] = vec[vec_idx]
