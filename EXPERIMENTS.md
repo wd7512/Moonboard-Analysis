@@ -51,7 +51,7 @@ All results below use 5-fold stratified CV with retrain-per-fold on the full dat
 
 **Full-data results (no subsampling):**
 
-All 8 submissions run on the full dataset (25,738 unique routes after deduplication and preprocessing).
+All 14 submissions run on the full dataset (25,738 unique routes after deduplication and preprocessing).
 
 <!-- LEADERBOARD-FULLDATA-START -->
 
@@ -553,7 +553,7 @@ Before creating a new submission, verify ALL of the following:
 
 3. **Is there a ceiling to flat binary feature models?** FastMLP at 46.61% (10K) → 82.56% (92K) suggests more data helps, but is there an architectural limit? At what point do spatial models overtake?
 
-4. **What is the real within-1 accuracy?** Re-benchmark all submissions to get clean within-grade metrics now that the evaluation pipeline is stable.
+4. **Can ordinal regression beat cross-entropy with strong features?** CORAL with 198-dim features underperforms (36.8% exact). The real test: ordinal loss on DeepMLP's 656-dim features (section-separated + bigram + meta). Drummond & Popinga (2021) showed grades are fundamentally ordinal — we haven't tested ordinal loss with a strong feature representation.
 
 5. **Can cross-edition generalization be improved?** 2016 → 2017/2019 generalization is the open problem from Petashvili & Rodda (2023). See Section 7.2.
 
