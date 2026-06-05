@@ -67,8 +67,11 @@ def parse_args() -> argparse.Namespace:
 
 def sequences_to_grids(
     sequences: list[list[str]],
+    setup: str | None = None,
 ) -> tuple[list[np.ndarray], list[int]]:
-    mapper = GridMapper(setup=detect_grid_setup(sequences))
+    if setup is None:
+        setup = detect_grid_setup(sequences)
+    mapper = GridMapper(setup=setup)
     features: list[np.ndarray] = []
     labels: list[int] = []
 

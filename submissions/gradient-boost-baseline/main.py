@@ -204,8 +204,9 @@ def train_and_evaluate(
     """
     set_seeds(seed)
 
+    _setup = detect_grid_setup(sequences)
     X = np.concatenate([
-        build_feature_matrix(sequences),
+        build_feature_matrix(sequences, setup=_setup),
         compute_additional_features(sequences),
     ], axis=1)
     y = np.array(grades, dtype=np.int64)
