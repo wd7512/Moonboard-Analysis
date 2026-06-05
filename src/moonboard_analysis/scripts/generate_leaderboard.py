@@ -141,7 +141,10 @@ def generate_comparison_simple(entries_2016: list[dict], entries_2017: list[dict
     for name in all_names:
         e16 = by_name_2016.get(name)
         e17 = by_name_2017.get(name)
-        model = (e16 or e17)["model"]
+        entry = e16 if e16 is not None else e17
+        if entry is None:
+            continue
+        model = entry["model"]
         ea16 = _fmt_pct(e16["exact_accuracy"]["mean"], e16["exact_accuracy"]["std"]) if e16 else "—"
         ea17 = _fmt_pct(e17["exact_accuracy"]["mean"], e17["exact_accuracy"]["std"]) if e17 else "—"
         mf16 = _fmt_pct(e16["macro_f1"]["mean"], e16["macro_f1"]["std"]) if e16 else "—"
