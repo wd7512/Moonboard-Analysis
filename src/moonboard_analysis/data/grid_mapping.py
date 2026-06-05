@@ -1,7 +1,11 @@
 """Grid mapping utilities for Moonboard hold representations.
 
-Provides bidirectional conversion between 164-dimensional feature vectors
+Provides bidirectional conversion between compressed feature vectors
 and 18x11 Moonboard grid representations (3 layers: start/middle/end).
+
+Supports multiple hold setups:
+- "2016" (default): 164-dim vectors (58 null holds compressed out)
+- "master2017": 242-dim vectors (no null holds — all positions used)
 """
 
 from __future__ import annotations
@@ -9,90 +13,69 @@ from __future__ import annotations
 import numpy as np
 
 
+def detect_grid_setup(sequences: list[list[str]]) -> str:
+    """Detect Moonboard hold setup from tokenised route sequences.
+
+    Masters 2017 uses row-1 holds (A1-K1) which are always null
+    on the 2016 board. If any row-1 hold appears, it's master2017.
+
+    Args:
+        sequences: Tokenised route sequences from preprocess_lstm_data().
+
+    Returns:
+        "master2017" if any row-1 hold is found, otherwise "2016".
+    """
+    for seq in sequences:
+        for token in seq:
+            if len(token) >= 2 and token[0].isalpha() and token[1:].isdigit():
+                if int(token[1:]) == 1:
+                    return "master2017"
+    return "2016"
+
+
 class GridMapper:
-    """Maps between 164-dim vectors and 18x11 Moonboard grid (3 layers).
+    """Maps between condensed vectors and 3x18x11 Moonboard grid.
 
     The Moonboard has 18 rows x 11 columns (A-K). Routes are represented
     as 3 binary layers: start holds, middle holds, and end holds (3x18x11).
 
-    An optimized representation condenses this to 22x11 by extracting only
-    the rows that contain route-relevant holds, then removes 78 positions
-    that never appear in any route, yielding a 164-dim vector
-    (22*11 - 78 = 164).
+    On the 2016 board, 58 hold positions never appear in any route, allowing
+    a compressed 164-dim representation (242 - 78 = 164 after accounting for
+    multi-layer mapping). On the Masters 2017 board, all 198 positions are
+    used, so the full 242-dim grid is the canonical representation.
 
-    Attributes:
-        NULL_HOLDS: 78 hold descriptions that never appear in routes.
-        _insert_indices: Sorted indices in the flattened 22x11 array
-            where null holds are located.
+    Args:
+        setup: Hold setup identifier ("2016" or "master2017").
+
+    Raises:
+        ValueError: If setup is not recognised.
     """
 
-    NULL_HOLDS: list[str] = [
-        "F18",
-        "J18",
-        "A17",
-        "B17",
-        "C17",
-        "E17",
-        "F17",
-        "H17",
-        "I17",
-        "J17",
-        "K17",
-        "J15",
-        "K15",
-        "B14",
-        "A8",
-        "A7",
-        "A6",
-        "H6",
-        "B5",
-        "E5",
-        "G5",
-        "A4",
-        "C4",
-        "D4",
-        "E4",
-        "F4",
-        "H4",
-        "J4",
-        "K4",
-        "A3",
-        "C3",
-        "E3",
-        "F3",
-        "G3",
-        "H3",
-        "I3",
-        "J3",
-        "K3",
-        "A2",
-        "B2",
-        "C2",
-        "D2",
-        "E2",
-        "F2",
-        "H2",
-        "I2",
-        "K2",
-        "A1",
-        "B1",
-        "C1",
-        "D1",
-        "E1",
-        "F1",
-        "G1",
-        "H1",
-        "I1",
-        "J1",
-        "K1",
-    ]
+    _NULL_HOLDS: dict[str, list[str]] = {
+        "2016": [
+            "F18", "J18", "A17", "B17", "C17", "E17", "F17",
+            "H17", "I17", "J17", "K17", "J15", "K15", "B14",
+            "A8", "A7", "A6", "H6", "B5", "E5", "G5",
+            "A4", "C4", "D4", "E4", "F4", "H4", "J4", "K4",
+            "A3", "C3", "E3", "F3", "G3", "H3", "I3", "J3", "K3",
+            "A2", "B2", "C2", "D2", "E2", "F2", "H2", "I2", "K2",
+            "A1", "B1", "C1", "D1", "E1", "F1", "G1", "H1", "I1", "J1", "K1",
+        ],
+        "master2017": [],  # All positions used
+    }
 
-    _insert_indices: list[int] = []
+    _insert_indices: dict[str, list[int]] = {}
 
-    def __init__(self) -> None:
-        """Compute _insert_indices from NULL_HOLDS on first instantiation."""
-        if not GridMapper._insert_indices:
-            GridMapper._insert_indices = self._compute_insert_indices()
+    def __init__(self, setup: str = "2016") -> None:
+        if setup not in self._NULL_HOLDS:
+            raise ValueError(
+                f"Unknown setup: {setup!r}. Choose from: {list(self._NULL_HOLDS.keys())}"
+            )
+        self.setup = setup
+        self.NULL_HOLDS = self._NULL_HOLDS[setup]
+        if setup not in self._insert_indices:
+            self._insert_indices[setup] = self._compute_insert_indices()
+        self._insert_set = set(self._insert_indices[setup])
 
     @staticmethod
     def _convert_key(key: str) -> tuple[int, int]:
@@ -110,8 +93,7 @@ class GridMapper:
         row = 18 - int(number)
         return row, col
 
-    @classmethod
-    def _compute_insert_indices(cls) -> list[int]:
+    def _compute_insert_indices(self) -> list[int]:
         """Compute flattened indices of null holds in the condensed 22x11 array.
 
         Returns:
@@ -119,8 +101,8 @@ class GridMapper:
             that correspond to null hold positions.
         """
         null_positions: set[tuple[int, int]] = set()
-        for hold in cls.NULL_HOLDS:
-            row, col = cls._convert_key(hold)
+        for hold in self.NULL_HOLDS:
+            row, col = self._convert_key(hold)
             null_positions.add((row, col))
 
         condensed = np.zeros((22, 11), dtype=float)
@@ -172,30 +154,41 @@ class GridMapper:
         return new_moves
 
     def vector_to_grid(self, vec: np.ndarray) -> np.ndarray:
-        """Convert 164-dim vector to 3x18x11 Moonboard grid.
+        """Convert compressed vector to 3x18x11 Moonboard grid.
 
-        Inserts zeros at null hold positions, reshapes to 22x11, then
-        expands to the full 3-layer grid.
+        For 2016: inserts zeros at null hold positions, reshapes to 22x11,
+        then expands to the full 3-layer grid via _uncondense.
+
+        For 2017: no null-holds compression. The vector is the flattened
+        3x18x11 grid directly (594-dim).
 
         Args:
-            vec: 1D array of shape (164,).
+            vec: 1D array — (164,) for 2016 or (594,) for 2017.
 
         Returns:
             3D array of shape (3, 18, 11) with start/middle/end layers.
 
         Raises:
-            ValueError: If input is not 1D with 164 elements.
+            ValueError: If input shape doesn't match the setup.
         """
-        if vec.ndim != 1 or vec.shape[0] != 164:
-            msg = f"Expected 1D array with 164 elements, got shape {vec.shape}"
+        insert_indices = self._insert_indices[self.setup]
+
+        if self.setup == "master2017":
+            if vec.ndim != 1 or vec.shape[0] != 3 * 18 * 11:
+                msg = f"Expected 1D array with {3*18*11} elements, got shape {vec.shape}"
+                raise ValueError(msg)
+            return vec.reshape((3, 18, 11))
+
+        # 2016: expand compressed vector by inserting zeros at null positions
+        expected_dim = 242 - len(insert_indices)
+        if vec.ndim != 1 or vec.shape[0] != expected_dim:
+            msg = f"Expected 1D array with {expected_dim} elements, got shape {vec.shape}"
             raise ValueError(msg)
 
         full = np.zeros(22 * 11, dtype=vec.dtype)
         vec_idx = 0
-        insert_set = set(self._insert_indices)
-
         for i in range(22 * 11):
-            if i in insert_set:
+            if i in self._insert_set:
                 full[i] = 0
             else:
                 full[i] = vec[vec_idx]
@@ -206,16 +199,18 @@ class GridMapper:
         return grid
 
     def grid_to_vector(self, grid: np.ndarray) -> np.ndarray:
-        """Convert 3x18x11 Moonboard grid to 164-dim vector.
+        """Convert 3x18x11 Moonboard grid to vector representation.
 
-        Condenses the grid to 22x11, flattens, then removes null hold
-        positions.
+        For 2016: condenses the grid to 22x11, flattens, then removes
+        null hold positions → 164-dim vector.
+
+        For 2017: returns the flattened full grid → 594-dim vector.
 
         Args:
             grid: 3D array of shape (3, 18, 11) with start/middle/end layers.
 
         Returns:
-            1D array of shape (164,).
+            1D array — (164,) for 2016 or (594,) for 2017.
 
         Raises:
             ValueError: If input shape is not (3, 18, 11).
@@ -224,7 +219,15 @@ class GridMapper:
             msg = f"Expected shape (3, 18, 11), got {grid.shape}"
             raise ValueError(msg)
 
+        if self.setup == "master2017":
+            return grid.flatten()
+
         condensed = self._condense(grid)
         flat = condensed.flatten()
-        vec = np.delete(flat, self._insert_indices)
+
+        insert_indices = self._insert_indices[self.setup]
+        if not insert_indices:
+            return flat
+
+        vec = np.delete(flat, list(insert_indices))
         return vec

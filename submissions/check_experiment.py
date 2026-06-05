@@ -232,7 +232,7 @@ def main() -> None:
     exp = Path(args.experiments_file)
     if exp.exists():
         secs = _relevant_sections(exp.read_text())
-        print(f"\n--- Relevant EXPERIMENTS.md sections ---")
+        print("\n--- Relevant EXPERIMENTS.md sections ---")
         print("\n".join(secs))
 
     sys.exit(0 if failed == 0 else 1)

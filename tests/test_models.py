@@ -2,6 +2,7 @@
 
 import torch
 
+from moonboard_analysis.config import GRADE_ORDER
 from moonboard_analysis.models.autoencoder import Autoencoder
 from moonboard_analysis.models.lstm import ClimbingGradePredictor
 
@@ -75,7 +76,7 @@ class TestLSTMShapes:
         ]
         x = torch.tensor(seq_indices, dtype=torch.long)
         output = mock_lstm(x)
-        assert output.shape == (batch_size, 12)
+        assert output.shape == (batch_size, len(GRADE_ORDER))
 
     def test_forward_output_is_logits(
         self, mock_lstm: ClimbingGradePredictor
@@ -93,7 +94,7 @@ class TestLSTMShapes:
         """Verify forward pass works with a single sequence."""
         x = torch.randint(0, 100, (1, 5), dtype=torch.long)
         output = mock_lstm(x)
-        assert output.shape == (1, 12)
+        assert output.shape == (1, len(GRADE_ORDER))
 
     def test_variable_sequence_lengths(
         self, mock_lstm: ClimbingGradePredictor
@@ -102,4 +103,4 @@ class TestLSTMShapes:
         for seq_length in [1, 5, 20, 50]:
             x = torch.randint(0, 100, (4, seq_length), dtype=torch.long)
             output = mock_lstm(x)
-            assert output.shape == (4, 12)
+            assert output.shape == (4, len(GRADE_ORDER))

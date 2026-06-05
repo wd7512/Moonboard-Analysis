@@ -182,17 +182,21 @@ class TestCheckDetectsOutdated:
         import json
 
         json_path = tmp_path / "leaderboard.json"
-        data = {
-            "version": "1.0",
-            "dataset": "test",
-            "num_routes": 0,
-            "cv_folds": 0,
-            "description": "",
-            "entries": MOCK_ENTRIES,
+        v2_data = {
+            "version": "2.0",
+            "datasets": {
+                "2016": {
+                    "num_routes": 0,
+                    "cv_folds": 0,
+                    "description": "",
+                    "entries": MOCK_ENTRIES,
+                },
+            },
         }
-        json_path.write_text(json.dumps(data))
+        json_path.write_text(json.dumps(v2_data))
         md_path = tmp_path / "test.md"
-        table = generate_simple_table(MOCK_ENTRIES)
+        from moonboard_analysis.scripts.generate_leaderboard import generate_comparison_simple
+        table = generate_comparison_simple(MOCK_ENTRIES, [])
         md_path.write_text(
             f"<!-- LEADERBOARD-START -->\n\n{table}\n\n<!-- LEADERBOARD-END -->\n"
         )

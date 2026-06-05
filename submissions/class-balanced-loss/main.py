@@ -40,7 +40,7 @@ from moonboard_analysis.utils.reproducibility import set_seeds
 NUM_COLS = 11
 NUM_ROWS = 18
 HOLD_VECTOR_DIM = NUM_COLS * NUM_ROWS  # 198
-NUM_CLASSES = len(GRADE_ORDER)  # 12
+NUM_CLASSES = len(GRADE_ORDER)  # 13
 GRADE_LABELS = frozenset(GRADE_ORDER)
 
 
@@ -152,7 +152,7 @@ class ClassBalancedLoss(nn.Module):
     def __init__(
         self,
         beta: float = 0.99,
-        num_classes: int = 12,
+        num_classes: int = len(GRADE_ORDER),
         reduction: str = "mean",
         class_counts: np.ndarray | None = None,
     ):
