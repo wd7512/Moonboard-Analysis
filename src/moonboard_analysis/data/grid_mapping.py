@@ -173,7 +173,7 @@ class GridMapper:
         Raises:
             ValueError: If input shape doesn't match the setup.
         """
-        insert_set = set(self._insert_indices[self.setup])
+        insert_indices = self._insert_indices[self.setup]
 
         if self.setup == "master2017":
             if vec.ndim != 1 or vec.shape[0] != 3 * 18 * 11:
@@ -182,11 +182,12 @@ class GridMapper:
             return vec.reshape((3, 18, 11))
 
         # 2016: expand compressed vector by inserting zeros at null positions
-        expected_dim = 242 - len(insert_set)
+        expected_dim = 242 - len(insert_indices)
         if vec.ndim != 1 or vec.shape[0] != expected_dim:
             msg = f"Expected 1D array with {expected_dim} elements, got shape {vec.shape}"
             raise ValueError(msg)
 
+        insert_set = set(insert_indices)
         full = np.zeros(22 * 11, dtype=vec.dtype)
         vec_idx = 0
         for i in range(22 * 11):
@@ -227,9 +228,9 @@ class GridMapper:
         condensed = self._condense(grid)
         flat = condensed.flatten()
 
-        insert_set = set(self._insert_indices[self.setup])
-        if not insert_set:
+        insert_indices = self._insert_indices[self.setup]
+        if not insert_indices:
             return flat
 
-        vec = np.delete(flat, list(insert_set))
+        vec = np.delete(flat, list(insert_indices))
         return vec
