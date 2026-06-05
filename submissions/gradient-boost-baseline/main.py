@@ -123,9 +123,11 @@ def compute_additional_features(sequences: list[list[str]]) -> np.ndarray:
     return feats
 
 
-def build_feature_matrix(sequences: list[list[str]]) -> np.ndarray:
+def build_feature_matrix(sequences: list[list[str]], setup: str | None = None) -> np.ndarray:
     """Build 164-dim grid-based hold features for each route."""
-    mapper = GridMapper(setup=detect_grid_setup(sequences))
+    if setup is None:
+        setup = detect_grid_setup(sequences)
+    mapper = GridMapper(setup=setup)
     all_vecs: list[np.ndarray] = []
 
     for seq in sequences:
