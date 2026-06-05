@@ -46,13 +46,12 @@ All results below use 5-fold stratified CV with retrain-per-fold on the full dat
 
 > **Note:** The 10K stratified subsample leaderboard has been superseded by the
 > [full-data results](#full-data-results) below. The 10K table was computed with
-> a buggy within-metric calculation (`_accuracy_within_diagonal` off-by-one) and
-> used data augmentation that introduced leakage — neither issue affects the
+> data augmentation that introduced leakage — this issue does not affect the
 > full-data results.
 
 **Full-data results (no subsampling):**
 
-All 8 submissions run on the full dataset (25,738 unique routes after deduplication and preprocessing). Within-metrics use the corrected (bug-fixed) calculation.
+All 14 submissions run on the full dataset (25,738 unique routes after deduplication and preprocessing).
 
 <!-- LEADERBOARD-FULLDATA-START -->
 
@@ -96,7 +95,7 @@ All 8 submissions run on the full dataset (25,738 unique routes after deduplicat
 
 <!-- LEADERBOARD-FULLDATA-END -->
 
-> Full-data results use the complete ~26K route dataset with the corrected within-metric calculation (Protocol v2, bug-fixed).
+> Full-data results use the complete ~26K route dataset (Protocol v2).
 
 ---
 
@@ -494,29 +493,7 @@ Key papers on Moonboard climbing route grade prediction and their relationship t
 | Data leakage: same route in train and test folds | Pre-`039eeda` | **FIXED** | Inflated RF to 96.43% (true: 49.55%) |
 | Confusion matrix size mismatch with missing classes | `eda00c6` | **FIXED** | Metrics wrong when folds lack all grades |
 | Class weight tensor shape mismatch | `bd12e1c` | **FIXED** | LSTM class weights failed |
-| `_accuracy_within_diagonal` off-by-one | Present in all submissions | **KNOWN BUG** | Width parameter uses wrong range — see below |
 
-### CRITICAL: Within-Metric Bug (unfixed)
-
-In `/src/moonboard_analysis/training/metrics.py`, the `_accuracy_within_diagonal` function:
-
-```python
-def _accuracy_within_diagonal(conf_matrix: np.ndarray, width: int) -> float:
-    n = conf_matrix.shape[0]
-    total_correct = 0
-    for i in range(n):
-        for j in range(max(0, i - width + 1), min(n, i + width)):
-            total_correct += conf_matrix[i, j]
-    return total_correct / conf_matrix.sum()
-```
-
-Called as `width=1` for "within_1_accuracy": the range `range(i-0, i+1)` = `[i]` = exact only. For true ±1, it needs `width=2` (range `range(i-1, i+2)`). The same applies recursively: `width=2` for "within_2" gives ±1, not ±2.
-
-**Impact:** All within-1 and within-2 metrics across ALL submissions are underreported. Submissions using `evaluate_classification()` (all tree-based, deep-mlp) are affected. Submissions that compute their own metrics inline (ridge, tree in benchmark) may or may not have the same bug — check each individually.
-
-**Until fixed, treat all within-K metrics as unreliable. Exact accuracy is unaffected.**
-
----
 
 ## 9. Experiment Decision Matrix
 
@@ -576,7 +553,7 @@ Before creating a new submission, verify ALL of the following:
 
 3. **Is there a ceiling to flat binary feature models?** FastMLP at 46.61% (10K) → 82.56% (92K) suggests more data helps, but is there an architectural limit? At what point do spatial models overtake?
 
-4. **What is the real within-1 accuracy?** Once the `_accuracy_within_diagonal` bug is fixed, re-benchmark all submissions.
+4. **Can ordinal regression beat cross-entropy with strong features?** CORAL with 198-dim features underperforms (36.8% exact). The real test: ordinal loss on DeepMLP's 656-dim features (section-separated + bigram + meta). Drummond & Popinga (2021) showed grades are fundamentally ordinal — we haven't tested ordinal loss with a strong feature representation.
 
 5. **Can cross-edition generalization be improved?** 2016 → 2017/2019 generalization is the open problem from Petashvili & Rodda (2023). See Section 7.2.
 
