@@ -26,7 +26,7 @@ SUBMISSIONS = [
 ]
 
 def main():
-    with open(LEADERBOARD_PATH) as f:
+    with open(LEADERBOARD_PATH, encoding="utf-8") as f:
         leaderboard = json.load(f)
     
     entries_2016 = leaderboard["datasets"]["2016"]["entries"]
