@@ -69,6 +69,36 @@ class TestEvaluateClassification:
         conf_matrix = metrics["confusion_matrix"]
         assert conf_matrix.shape == (num_classes, num_classes)
 
+    def test_macro_f1_ignores_empty_classes(self) -> None:
+        """macro_F1 should only average over classes with non-zero support.
+
+        Simulates the 2016 dataset situation: 13 classes but only 10 have
+        samples. The 3 empty classes (0, 1, 2) must not drag down the mean.
+        """
+        # Classes 0,1,2 have zero support. Classes 3-12 all predict perfectly.
+        y_true = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        y_pred = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        metrics = evaluate_classification(y_true, y_pred, num_classes=13)
+
+        # With the bug: macro_f1 = mean of [0,0,0,1,1,1,1,1,1,1,1,1,1] = 10/13 ≈ 0.769
+        # With the fix: macro_f1 = mean of [1,1,1,1,1,1,1,1,1,1] = 1.0
+        assert metrics["macro_f1"] == 1.0
+
+    def test_macro_f1_partial_support(self) -> None:
+        """Verify macro_f1 with only a subset of classes having support."""
+        # Class 1 has zero support, class 0 has perfect F1.
+        # macro_f1 should be 1.0 (only class 0 counts).
+        y_true = [0, 0, 0]
+        y_pred = [0, 0, 0]
+        metrics = evaluate_classification(y_true, y_pred, num_classes=2)
+        assert metrics["macro_f1"] == 1.0
+
+    def test_macro_f1_zero_support_all_classes(self) -> None:
+        """If y_true is empty, macro_f1 and weighted_f1 should be 0.0."""
+        metrics = evaluate_classification([], [], num_classes=3)
+        assert metrics["macro_f1"] == 0.0
+        assert metrics["weighted_f1"] == 0.0
+
 
 class TestAccuracyWithinDiagonal:
     """Test the diagonal accuracy helper function."""
