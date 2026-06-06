@@ -42,6 +42,21 @@ def evaluate_classification(
     """Compute per-class and overall classification metrics."""
     from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
 
+    if len(y_true) == 0:
+        return {
+            "confusion_matrix": np.zeros((num_classes, num_classes), dtype=int),
+            "exact_accuracy": 0.0,
+            "within_1_accuracy": 0.0,
+            "within_2_accuracy": 0.0,
+            "within_3_accuracy": 0.0,
+            "within_4_accuracy": 0.0,
+            "per_class_precision": [0.0] * num_classes,
+            "per_class_recall": [0.0] * num_classes,
+            "per_class_f1": [0.0] * num_classes,
+            "macro_f1": 0.0,
+            "weighted_f1": 0.0,
+        }
+
     conf_matrix = confusion_matrix(y_true, y_pred, labels=range(num_classes))
     precision, recall, f1, support = precision_recall_fscore_support(
         y_true, y_pred, labels=range(num_classes), zero_division=0
@@ -53,7 +68,15 @@ def evaluate_classification(
     within_4 = _accuracy_within_diagonal(conf_matrix, width=4)
 
     total_correct = sum(conf_matrix[i][i] for i in range(num_classes))
-    exact_accuracy = total_correct / conf_matrix.sum()
+    exact_accuracy = total_correct / conf_matrix.sum() if conf_matrix.sum() > 0 else 0.0
+
+    # Only average over classes with non-zero support.
+    # Empty classes (zero samples in y_true) get F1=0 via zero_division=0,
+    # which would drag down the mean. This is dataset-aware: the 2016
+    # Moonboard dataset has 3 empty classes (6A, 6A+, 6B) that should not
+    # affect the macro-F1 score.
+    macro_f1 = float(np.mean(f1[support > 0])) if support.any() else 0.0
+    weighted_f1 = float(np.average(f1, weights=support)) if support.any() else 0.0
 
     return {
         "confusion_matrix": conf_matrix,
@@ -65,8 +88,8 @@ def evaluate_classification(
         "per_class_precision": precision.tolist(),
         "per_class_recall": recall.tolist(),
         "per_class_f1": f1.tolist(),
-        "macro_f1": float(np.mean(f1)),
-        "weighted_f1": float(np.average(f1, weights=support)),
+        "macro_f1": macro_f1,
+        "weighted_f1": weighted_f1,
     }
 
 
