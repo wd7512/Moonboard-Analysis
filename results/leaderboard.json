@@ -7,10 +7,32 @@
       "description": "2016 hold setup (25,738 unique routes)",
       "entries": [
         {
+          "submission": "coral-engineered-stacking",
+          "model": "Coral Stacking",
+          "model_class": "3-model stacking meta-learner",
+          "features": "198-dim binary hold vector",
+          "exact_accuracy": {
+            "mean": 0.4150280736253148,
+            "std": 0.00852579604088267
+          },
+          "within_one_grade": {
+            "mean": 0.6658635419369827,
+            "std": 0.004621652187207983
+          },
+          "within_two_grades": {
+            "mean": 0.8516202134329198,
+            "std": 0.003005795969077426
+          },
+          "macro_f1": {
+            "mean": 0.1508288989016683,
+            "std": 0.007307851059332012
+          }
+        },
+        {
           "submission": "deep-mlp-baseline",
-          "model": "DeepMLP (ensemble)",
-          "model_class": "4-layer DeepMLP + 5-model softmax ensemble",
-          "features": "656-dim: section-separated + bigram + meta",
+          "model": "deep-mlp-baseline",
+          "model_class": "",
+          "features": "",
           "exact_accuracy": {
             "mean": 0.40519834201590565,
             "std": 0.00627044823329199
@@ -30,9 +52,9 @@
         },
         {
           "submission": "fast-mlp",
-          "model": "FastMLP",
-          "model_class": "3-layer MLP (198->256->128->13)",
-          "features": "198-dim binary hold vector, per-fold standardized",
+          "model": "fast-mlp",
+          "model_class": "",
+          "features": "",
           "exact_accuracy": {
             "mean": 0.4025952007106078,
             "std": 0.00743015688658901
@@ -51,10 +73,32 @@
           }
         },
         {
+          "submission": "coral-engineered-10ens",
+          "model": "Coral 10-Class Ensemble",
+          "model_class": "10-class focal + F1-loss ensemble",
+          "features": "198-dim binary hold vector",
+          "exact_accuracy": {
+            "mean": 0.4008412711769864,
+            "std": 0.006711764582050076
+          },
+          "within_one_grade": {
+            "mean": 0.6980511570469248,
+            "std": 0.002223417771757869
+          },
+          "within_two_grades": {
+            "mean": 0.9015668417601015,
+            "std": 0.0020755260013256313
+          },
+          "macro_f1": {
+            "mean": 0.19530890152728464,
+            "std": 0.0028505930111194233
+          }
+        },
+        {
           "submission": "bottom-top-lstm",
-          "model": "Bottom-to-Top LSTM",
-          "model_class": "Bidirectional LSTM with bottom-to-top token ordering",
-          "features": "Hold name tokens",
+          "model": "bottom-top-lstm",
+          "model_class": "",
+          "features": "",
           "exact_accuracy": {
             "mean": 0.40072992331589574,
             "std": 0.007966686548135734
@@ -74,9 +118,9 @@
         },
         {
           "submission": "focal-loss",
-          "model": "Focal Loss (MLP)",
-          "model_class": "3-layer MLP (198->256->128->13) + FocalLoss(gamma=2.0)",
-          "features": "198-dim binary hold vector, per-fold standardized",
+          "model": "focal-loss",
+          "model_class": "",
+          "features": "",
           "exact_accuracy": {
             "mean": 0.3987103779798553,
             "std": 0.015266525554250962
@@ -96,9 +140,9 @@
         },
         {
           "submission": "transformer-encoder",
-          "model": "Transformer Encoder",
-          "model_class": "Transformer encoder with masked mean pooling",
-          "features": "Hold name tokens",
+          "model": "transformer-encoder",
+          "model_class": "",
+          "features": "",
           "exact_accuracy": {
             "mean": 0.3974663615425224,
             "std": 0.009359217207360018
@@ -118,9 +162,9 @@
         },
         {
           "submission": "perceptron-baseline",
-          "model": "Perceptron Baseline",
-          "model_class": "2-layer MLP (198->128->13)",
-          "features": "198-dim binary hold vector",
+          "model": "perceptron-baseline",
+          "model_class": "",
+          "features": "",
           "exact_accuracy": {
             "mean": 0.39645664548520576,
             "std": 0.006004813665445339
@@ -139,10 +183,32 @@
           }
         },
         {
+          "submission": "coral-engineered",
+          "model": "Coral Engineered",
+          "model_class": "Focal ordinal ensemble (gamma=2.0)",
+          "features": "198-dim binary hold vector",
+          "exact_accuracy": {
+            "mean": 0.3960681375486116,
+            "std": 0.003933236322400659
+          },
+          "within_one_grade": {
+            "mean": 0.6547129542952352,
+            "std": 0.0046001668023860545
+          },
+          "within_two_grades": {
+            "mean": 0.8527858202717343,
+            "std": 0.0029184461519997516
+          },
+          "macro_f1": {
+            "mean": 0.17341939372084875,
+            "std": 0.0034152313016584676
+          }
+        },
+        {
           "submission": "class-balanced-loss",
-          "model": "Class-Balanced Loss (MLP)",
-          "model_class": "3-layer MLP (198->256->128->13) + ClassBalancedLoss",
-          "features": "198-dim binary hold vector, per-fold standardized",
+          "model": "class-balanced-loss",
+          "model_class": "",
+          "features": "",
           "exact_accuracy": {
             "mean": 0.3954461972627895,
             "std": 0.0056718974758660674
@@ -162,9 +228,9 @@
         },
         {
           "submission": "gradient-boost-baseline",
-          "model": "Gradient Boost",
-          "model_class": "GradientBoostingClassifier (sklearn)",
-          "features": "164-dim compressed grid vector via GridMapper or 198-dim hold vector",
+          "model": "gradient-boost-baseline",
+          "model_class": "",
+          "features": "",
           "exact_accuracy": {
             "mean": 0.39490252316170327,
             "std": 0.004810008373831324
@@ -184,9 +250,9 @@
         },
         {
           "submission": "multichannel-2dcnn",
-          "model": "Multi-Channel 2D CNN",
-          "model_class": "Multi-channel 2D CNN with per-layer channels",
-          "features": "3-layer grid (3x18x11)",
+          "model": "multichannel-2dcnn",
+          "model_class": "",
+          "features": "",
           "exact_accuracy": {
             "mean": 0.3943585924254275,
             "std": 0.007847141854533852
@@ -205,10 +271,76 @@
           }
         },
         {
+          "submission": "coral-engineered-f1loss-10class",
+          "model": "Coral F1-Loss 10-Class",
+          "model_class": "F1-loss, 10 classes",
+          "features": "198-dim binary hold vector",
+          "exact_accuracy": {
+            "mean": 0.39158454869179415,
+            "std": 0.0038597040283915424
+          },
+          "within_one_grade": {
+            "mean": 0.7106466525560012,
+            "std": 0.004612500066226859
+          },
+          "within_two_grades": {
+            "mean": 0.9101484894224795,
+            "std": 0.00271214911628707
+          },
+          "macro_f1": {
+            "mean": 0.1855041319250085,
+            "std": 0.002620382318164341
+          }
+        },
+        {
+          "submission": "coral-engineered-10class",
+          "model": "Coral 10-Class",
+          "model_class": "Focal ordinal ensemble, 10 classes",
+          "features": "198-dim binary hold vector",
+          "exact_accuracy": {
+            "mean": 0.38916389312317134,
+            "std": 0.0074844434822492105
+          },
+          "within_one_grade": {
+            "mean": 0.7211451910121133,
+            "std": 0.007107938799508189
+          },
+          "within_two_grades": {
+            "mean": 0.9119893142571629,
+            "std": 0.004189782619242388
+          },
+          "macro_f1": {
+            "mean": 0.20004334146938088,
+            "std": 0.004565343798349024
+          }
+        },
+        {
+          "submission": "coral-engineered-f1loss",
+          "model": "Coral F1-Loss",
+          "model_class": "Direct soft-F1 loss optimization",
+          "features": "198-dim binary hold vector",
+          "exact_accuracy": {
+            "mean": 0.38553881086424313,
+            "std": 0.002068165550681642
+          },
+          "within_one_grade": {
+            "mean": 0.6807443899924956,
+            "std": 0.005632686107556479
+          },
+          "within_two_grades": {
+            "mean": 0.874116008767262,
+            "std": 0.0029188692093516334
+          },
+          "macro_f1": {
+            "mean": 0.18042076147716116,
+            "std": 0.004877032160494747
+          }
+        },
+        {
           "submission": "tree-baseline",
-          "model": "Random Forest",
-          "model_class": "RandomForestClassifier (sklearn)",
-          "features": "164-dim compressed grid vector via GridMapper or 198-dim hold vector",
+          "model": "tree-baseline",
+          "model_class": "",
+          "features": "",
           "exact_accuracy": {
             "mean": 0.3851113170231103,
             "std": 0.0046217276491802356
@@ -228,9 +360,9 @@
         },
         {
           "submission": "2dcnn-baseline",
-          "model": "2D CNN Baseline",
-          "model_class": "3-layer 2D CNN",
-          "features": "3-layer grid (3x18x11)",
+          "model": "2dcnn-baseline",
+          "model_class": "",
+          "features": "",
           "exact_accuracy": {
             "mean": 0.37838940736745286,
             "std": 0.01928729492951491
@@ -250,9 +382,9 @@
         },
         {
           "submission": "ordinal-regression",
-          "model": "Ordinal Regression (CORAL)",
-          "model_class": "CORAL ordinal regression MLP (198->256->128->13)",
-          "features": "198-dim binary hold vector, per-fold standardized",
+          "model": "ordinal-regression",
+          "model_class": "",
+          "features": "",
           "exact_accuracy": {
             "mean": 0.368093324329967,
             "std": 0.009884903250603736
@@ -272,9 +404,9 @@
         },
         {
           "submission": "lstm-baseline",
-          "model": "LSTM Baseline",
-          "model_class": "2-layer LSTM + attention",
-          "features": "Hold name tokens",
+          "model": "lstm-baseline",
+          "model_class": "",
+          "features": "",
           "exact_accuracy": {
             "mean": 0.3631988761190238,
             "std": 0.007419492525358198
@@ -293,10 +425,76 @@
           }
         },
         {
+          "submission": "coral-engineered-gamma3",
+          "model": "Coral Gamma=3.0",
+          "model_class": "Focal ordinal (gamma=3.0)",
+          "features": "198-dim binary hold vector",
+          "exact_accuracy": {
+            "mean": 0.3610223983645394,
+            "std": 0.006000494461735269
+          },
+          "within_one_grade": {
+            "mean": 0.6934494698143426,
+            "std": 0.005440642572625519
+          },
+          "within_two_grades": {
+            "mean": 0.8838685158288812,
+            "std": 0.004637768511779832
+          },
+          "macro_f1": {
+            "mean": 0.17751221644756796,
+            "std": 0.006085352228315737
+          }
+        },
+        {
+          "submission": "coral-engineered-gamma1",
+          "model": "Coral Gamma=1.0",
+          "model_class": "Focal ordinal (gamma=1.0)",
+          "features": "198-dim binary hold vector",
+          "exact_accuracy": {
+            "mean": 0.3605947611096242,
+            "std": 0.00833487123814874
+          },
+          "within_one_grade": {
+            "mean": 0.6934881915355978,
+            "std": 0.007314601139258122
+          },
+          "within_two_grades": {
+            "mean": 0.8835576928737993,
+            "std": 0.004922018317527735
+          },
+          "macro_f1": {
+            "mean": 0.17451805095506884,
+            "std": 0.005489085977229267
+          }
+        },
+        {
+          "submission": "coral-engineered-temp",
+          "model": "Coral Temperature",
+          "model_class": "Focal ordinal with temperature scaling",
+          "features": "198-dim binary hold vector",
+          "exact_accuracy": {
+            "mean": 0.3573311238553127,
+            "std": 0.006170881129430049
+          },
+          "within_one_grade": {
+            "mean": 0.693021840107521,
+            "std": 0.004913464247450438
+          },
+          "within_two_grades": {
+            "mean": 0.8844511154497555,
+            "std": 0.0027021118601237223
+          },
+          "macro_f1": {
+            "mean": 0.22673663586337423,
+            "std": 0.004801433899099448
+          }
+        },
+        {
           "submission": "ridge-baseline",
-          "model": "Ridge Regression",
-          "model_class": "RidgeClassifierCV (sklearn)",
-          "features": "164-dim compressed grid vector via GridMapper or 198-dim hold vector",
+          "model": "ridge-baseline",
+          "model_class": "",
+          "features": "",
           "exact_accuracy": {
             "mean": 0.23937380862774296,
             "std": 0.006393436990868646
@@ -317,316 +515,514 @@
       ]
     },
     "master2017": {
-      "num_routes": 19363,
+      "num_routes": 19642,
       "cv_folds": 5,
       "description": "Masters 2017 hold setup (19,363 unique routes after adding 6B)",
       "entries": [
         {
-          "submission": "deep-mlp-baseline",
-          "model": "DeepMLP (ensemble)",
-          "model_class": "4-layer DeepMLP + 5-model softmax ensemble",
-          "features": "656-dim: section-separated + bigram + meta",
+          "submission": "coral-engineered-stacking",
+          "model": "Coral Stacking",
+          "model_class": "3-model stacking meta-learner",
+          "features": "198-dim binary hold vector",
           "exact_accuracy": {
-            "mean": 0.3214,
-            "std": 0.0018
+            "mean": 0.3397326329187904,
+            "std": 0.008834825312567999
           },
           "within_one_grade": {
-            "mean": 0.5629,
-            "std": 0.0002
+            "mean": 0.597970415794295,
+            "std": 0.005500061085547315
           },
           "within_two_grades": {
-            "mean": 0.7667,
-            "std": 0.004
+            "mean": 0.8087671843072703,
+            "std": 0.005340490368799925
           },
           "macro_f1": {
-            "mean": 0.1394,
-            "std": 0.0018
+            "mean": 0.1547089335630775,
+            "std": 0.0067802715719220705
+          }
+        },
+        {
+          "submission": "coral-engineered-10ens",
+          "model": "Coral 10-Class Ensemble",
+          "model_class": "10-class focal + F1-loss ensemble",
+          "features": "198-dim binary hold vector",
+          "exact_accuracy": {
+            "mean": 0.33389711812457745,
+            "std": 0.008834907846712235
+          },
+          "within_one_grade": {
+            "mean": 0.5946952341581897,
+            "std": 0.00598276827773256
+          },
+          "within_two_grades": {
+            "mean": 0.8301358539852062,
+            "std": 0.005406154368056612
+          },
+          "macro_f1": {
+            "mean": 0.18956190769482473,
+            "std": 0.006844941372752029
+          }
+        },
+        {
+          "submission": "coral-engineered-f1loss-10class",
+          "model": "Coral F1-Loss 10-Class",
+          "model_class": "F1-loss, 10 classes",
+          "features": "198-dim binary hold vector",
+          "exact_accuracy": {
+            "mean": 0.3334119486183274,
+            "std": 0.008107106131414996
+          },
+          "within_one_grade": {
+            "mean": 0.5958648182251461,
+            "std": 0.009009241051239063
+          },
+          "within_two_grades": {
+            "mean": 0.8318927415072798,
+            "std": 0.0015769418225623922
+          },
+          "macro_f1": {
+            "mean": 0.17488537516481215,
+            "std": 0.004261182531065833
+          }
+        },
+        {
+          "submission": "deep-mlp-baseline",
+          "model": "deep-mlp-baseline",
+          "model_class": "",
+          "features": "",
+          "exact_accuracy": {
+            "mean": 0.3311537085051171,
+            "std": 0.006881302765006782
+          },
+          "within_one_grade": {
+            "mean": 0.5770471912461133,
+            "std": 0.0069673960118213085
+          },
+          "within_two_grades": {
+            "mean": 0.7860660864597346,
+            "std": 0.0071766841287038445
+          },
+          "macro_f1": {
+            "mean": 0.15607301186658318,
+            "std": 0.007085859769145699
           }
         },
         {
           "submission": "focal-loss",
-          "model": "Focal Loss (MLP)",
-          "model_class": "3-layer MLP (198->256->128->13) + FocalLoss(gamma=2.0)",
-          "features": "198-dim binary hold vector, per-fold standardized",
+          "model": "focal-loss",
+          "model_class": "",
+          "features": "",
           "exact_accuracy": {
-            "mean": 0.3196,
-            "std": 0.002
+            "mean": 0.3275448534908181,
+            "std": 0.009950022963484708
           },
           "within_one_grade": {
-            "mean": 0.5656,
-            "std": 0.0037
+            "mean": 0.5805522645909967,
+            "std": 0.007648421468325796
           },
           "within_two_grades": {
-            "mean": 0.7713,
-            "std": 0.0019
+            "mean": 0.7890471485623791,
+            "std": 0.0035508638678010875
           },
           "macro_f1": {
-            "mean": 0.1494,
-            "std": 0.0002
-          }
-        },
-        {
-          "submission": "fast-mlp",
-          "model": "FastMLP",
-          "model_class": "3-layer MLP (198->256->128->13)",
-          "features": "198-dim binary hold vector, per-fold standardized",
-          "exact_accuracy": {
-            "mean": 0.3181,
-            "std": 0.0003
-          },
-          "within_one_grade": {
-            "mean": 0.558,
-            "std": 0.0013
-          },
-          "within_two_grades": {
-            "mean": 0.7606,
-            "std": 0.0007
-          },
-          "macro_f1": {
-            "mean": 0.1349,
-            "std": 0.0092
-          }
-        },
-        {
-          "submission": "bottom-top-lstm",
-          "model": "Bottom-to-Top LSTM",
-          "model_class": "Bidirectional LSTM with bottom-to-top token ordering",
-          "features": "Hold name tokens",
-          "exact_accuracy": {
-            "mean": 0.3165,
-            "std": 0.0032
-          },
-          "within_one_grade": {
-            "mean": 0.5633,
-            "std": 0.0007
-          },
-          "within_two_grades": {
-            "mean": 0.7686,
-            "std": 0.0014
-          },
-          "macro_f1": {
-            "mean": 0.1418,
-            "std": 0.0026
-          }
-        },
-        {
-          "submission": "perceptron-baseline",
-          "model": "Perceptron Baseline",
-          "model_class": "2-layer MLP (198->128->13)",
-          "features": "198-dim binary hold vector",
-          "exact_accuracy": {
-            "mean": 0.3157,
-            "std": 0.0021
-          },
-          "within_one_grade": {
-            "mean": 0.5671,
-            "std": 0.0027
-          },
-          "within_two_grades": {
-            "mean": 0.7817,
-            "std": 0.0007
-          },
-          "macro_f1": {
-            "mean": 0.1666,
-            "std": 0.0007
-          }
-        },
-        {
-          "submission": "tree-baseline",
-          "model": "Random Forest",
-          "model_class": "RandomForestClassifier (sklearn)",
-          "features": "164-dim compressed grid vector via GridMapper or 198-dim hold vector",
-          "exact_accuracy": {
-            "mean": 0.3141,
-            "std": 0.0033
-          },
-          "within_one_grade": {
-            "mean": 0.5498,
-            "std": 0.002
-          },
-          "within_two_grades": {
-            "mean": 0.7488,
-            "std": 0.0067
-          },
-          "macro_f1": {
-            "mean": 0.1711,
-            "std": 0.0066
-          }
-        },
-        {
-          "submission": "transformer-encoder",
-          "model": "Transformer Encoder",
-          "model_class": "Transformer encoder with masked mean pooling",
-          "features": "Hold name tokens",
-          "exact_accuracy": {
-            "mean": 0.3134,
-            "std": 0.0036
-          },
-          "within_one_grade": {
-            "mean": 0.5629,
-            "std": 0.001
-          },
-          "within_two_grades": {
-            "mean": 0.7691,
-            "std": 0.0096
-          },
-          "macro_f1": {
-            "mean": 0.1406,
-            "std": 0.0055
-          }
-        },
-        {
-          "submission": "multichannel-2dcnn",
-          "model": "Multi-Channel 2D CNN",
-          "model_class": "Multi-channel 2D CNN with per-layer channels",
-          "features": "3-layer grid (3x18x11)",
-          "exact_accuracy": {
-            "mean": 0.3077,
-            "std": 0.0041
-          },
-          "within_one_grade": {
-            "mean": 0.5422,
-            "std": 0.0011
-          },
-          "within_two_grades": {
-            "mean": 0.7497,
-            "std": 0.0077
-          },
-          "macro_f1": {
-            "mean": 0.1305,
-            "std": 0.0001
+            "mean": 0.15940480571282886,
+            "std": 0.0054938652435369065
           }
         },
         {
           "submission": "gradient-boost-baseline",
-          "model": "Gradient Boost",
-          "model_class": "GradientBoostingClassifier (sklearn)",
-          "features": "164-dim compressed grid vector via GridMapper or 198-dim hold vector",
+          "model": "gradient-boost-baseline",
+          "model_class": "",
+          "features": "",
           "exact_accuracy": {
-            "mean": 0.3046,
-            "std": 0.0002
+            "mean": 0.32644648608893323,
+            "std": 0.0032424298301787727
           },
           "within_one_grade": {
-            "mean": 0.548,
-            "std": 0.0024
+            "mean": 0.5585835348042074,
+            "std": 0.006165793866962958
           },
           "within_two_grades": {
-            "mean": 0.7558,
-            "std": 0.0063
+            "mean": 0.759860243603733,
+            "std": 0.006710118709512636
           },
           "macro_f1": {
-            "mean": 0.1712,
-            "std": 0.0019
+            "mean": 0.17233674740820065,
+            "std": 0.005103169457198618
           }
         },
         {
-          "submission": "lstm-baseline",
-          "model": "LSTM Baseline",
-          "model_class": "2-layer LSTM + attention",
-          "features": "Hold name tokens",
+          "submission": "bottom-top-lstm",
+          "model": "bottom-top-lstm",
+          "model_class": "",
+          "features": "",
           "exact_accuracy": {
-            "mean": 0.2961,
-            "std": 0.0019
+            "mean": 0.3247726543919921,
+            "std": 0.007658391663958689
           },
           "within_one_grade": {
-            "mean": 0.548,
-            "std": 0.0021
+            "mean": 0.571345889282771,
+            "std": 0.011747045627290405
           },
           "within_two_grades": {
-            "mean": 0.7667,
-            "std": 0.0152
+            "mean": 0.7885763415005193,
+            "std": 0.008194116653690737
           },
           "macro_f1": {
-            "mean": 0.1629,
-            "std": 0.0032
+            "mean": 0.14685537620134625,
+            "std": 0.005371298776868485
+          }
+        },
+        {
+          "submission": "coral-engineered-f1loss",
+          "model": "Coral F1-Loss",
+          "model_class": "Direct soft-F1 loss optimization",
+          "features": "198-dim binary hold vector",
+          "exact_accuracy": {
+            "mean": 0.3236216984405115,
+            "std": 0.006528668053176064
+          },
+          "within_one_grade": {
+            "mean": 0.5785643654296775,
+            "std": 0.006659028862805514
+          },
+          "within_two_grades": {
+            "mean": 0.8088190888226622,
+            "std": 0.004766986076485103
+          },
+          "macro_f1": {
+            "mean": 0.1589638890077956,
+            "std": 0.007323090992719639
+          }
+        },
+        {
+          "submission": "fast-mlp",
+          "model": "fast-mlp",
+          "model_class": "",
+          "features": "",
+          "exact_accuracy": {
+            "mean": 0.3235170138459468,
+            "std": 0.008218661015538623
+          },
+          "within_one_grade": {
+            "mean": 0.5764198634777175,
+            "std": 0.008079896780497052
+          },
+          "within_two_grades": {
+            "mean": 0.7842872828738631,
+            "std": 0.0031722476423730775
+          },
+          "macro_f1": {
+            "mean": 0.1538203207349394,
+            "std": 0.005012183166439135
+          }
+        },
+        {
+          "submission": "transformer-encoder",
+          "model": "transformer-encoder",
+          "model_class": "",
+          "features": "",
+          "exact_accuracy": {
+            "mean": 0.3211629922173324,
+            "std": 0.00648355289056418
+          },
+          "within_one_grade": {
+            "mean": 0.5686781148455122,
+            "std": 0.012610009428679233
+          },
+          "within_two_grades": {
+            "mean": 0.7794756357961119,
+            "std": 0.011873730307674258
+          },
+          "macro_f1": {
+            "mean": 0.14548265745576117,
+            "std": 0.0042347204259621535
+          }
+        },
+        {
+          "submission": "perceptron-baseline",
+          "model": "perceptron-baseline",
+          "model_class": "",
+          "features": "",
+          "exact_accuracy": {
+            "mean": 0.3211108961723635,
+            "std": 0.005954317194522735
+          },
+          "within_one_grade": {
+            "mean": 0.5755827971417221,
+            "std": 0.006699349010435097
+          },
+          "within_two_grades": {
+            "mean": 0.7898841191335857,
+            "std": 0.004556438766020788
+          },
+          "macro_f1": {
+            "mean": 0.16743457124587918,
+            "std": 0.006284992059244416
+          }
+        },
+        {
+          "submission": "tree-baseline",
+          "model": "tree-baseline",
+          "model_class": "",
+          "features": "",
+          "exact_accuracy": {
+            "mean": 0.3141016524077457,
+            "std": 0.003314218481784959
+          },
+          "within_one_grade": {
+            "mean": 0.5498482401715229,
+            "std": 0.0020499501277468604
+          },
+          "within_two_grades": {
+            "mean": 0.7488238852704999,
+            "std": 0.006727524027106226
+          },
+          "macro_f1": {
+            "mean": 0.17109935541675086,
+            "std": 0.006626087690382342
           }
         },
         {
           "submission": "class-balanced-loss",
-          "model": "Class-Balanced Loss (MLP)",
-          "model_class": "3-layer MLP (198->256->128->13) + ClassBalancedLoss",
-          "features": "198-dim binary hold vector, per-fold standardized",
+          "model": "class-balanced-loss",
+          "model_class": "",
+          "features": "",
           "exact_accuracy": {
-            "mean": 0.2894,
-            "std": 0.0013
+            "mean": 0.3119051912176575,
+            "std": 0.007907429146158329
           },
           "within_one_grade": {
-            "mean": 0.5292,
-            "std": 0.0097
+            "mean": 0.5537189982018109,
+            "std": 0.006623844152583992
           },
           "within_two_grades": {
-            "mean": 0.7198,
-            "std": 0.0106
+            "mean": 0.7611681443629562,
+            "std": 0.013447049145134076
           },
           "macro_f1": {
-            "mean": 0.1586,
-            "std": 0.0061
+            "mean": 0.1638624144886426,
+            "std": 0.011867282769943805
+          }
+        },
+        {
+          "submission": "multichannel-2dcnn",
+          "model": "multichannel-2dcnn",
+          "model_class": "",
+          "features": "",
+          "exact_accuracy": {
+            "mean": 0.31017852471880725,
+            "std": 0.009469847306548727
+          },
+          "within_one_grade": {
+            "mean": 0.5475988620954211,
+            "std": 0.015059050265560219
+          },
+          "within_two_grades": {
+            "mean": 0.7608019534922409,
+            "std": 0.013074947859720798
+          },
+          "macro_f1": {
+            "mean": 0.13486808953773727,
+            "std": 0.015008403700907856
+          }
+        },
+        {
+          "submission": "lstm-baseline",
+          "model": "lstm-baseline",
+          "model_class": "",
+          "features": "",
+          "exact_accuracy": {
+            "mean": 0.2977301008977812,
+            "std": 0.00516241114478471
+          },
+          "within_one_grade": {
+            "mean": 0.5634467717416167,
+            "std": 0.013773713869837287
+          },
+          "within_two_grades": {
+            "mean": 0.7752903862002392,
+            "std": 0.002391161154801066
+          },
+          "macro_f1": {
+            "mean": 0.1619226877154854,
+            "std": 0.011028091520446318
+          }
+        },
+        {
+          "submission": "coral-engineered-10class",
+          "model": "Coral 10-Class",
+          "model_class": "Focal ordinal ensemble, 10 classes",
+          "features": "198-dim binary hold vector",
+          "exact_accuracy": {
+            "mean": 0.29210549423219306,
+            "std": 0.004342694341026602
+          },
+          "within_one_grade": {
+            "mean": 0.6213074646089977,
+            "std": 0.002998321572294106
+          },
+          "within_two_grades": {
+            "mean": 0.8429669924550403,
+            "std": 0.006387873567463225
+          },
+          "macro_f1": {
+            "mean": 0.21029062469846677,
+            "std": 0.0031095019196742983
+          }
+        },
+        {
+          "submission": "coral-engineered",
+          "model": "Coral Engineered",
+          "model_class": "Focal ordinal ensemble (gamma=2.0)",
+          "features": "198-dim binary hold vector",
+          "exact_accuracy": {
+            "mean": 0.2883666986977083,
+            "std": 0.008481196071542458
+          },
+          "within_one_grade": {
+            "mean": 0.60435214026094,
+            "std": 0.004953407347382975
+          },
+          "within_two_grades": {
+            "mean": 0.8182345323449678,
+            "std": 0.005182314373626511
+          },
+          "macro_f1": {
+            "mean": 0.17339871163059534,
+            "std": 0.008272073033661448
+          }
+        },
+        {
+          "submission": "coral-engineered-gamma1",
+          "model": "Coral Gamma=1.0",
+          "model_class": "Focal ordinal (gamma=1.0)",
+          "features": "198-dim binary hold vector",
+          "exact_accuracy": {
+            "mean": 0.2852810751266558,
+            "std": 0.0035213872447704382
+          },
+          "within_one_grade": {
+            "mean": 0.6013706403764049,
+            "std": 0.006227110807327114
+          },
+          "within_two_grades": {
+            "mean": 0.8190711882604408,
+            "std": 0.006514290655573562
+          },
+          "macro_f1": {
+            "mean": 0.17201654271754996,
+            "std": 0.0047963212233820525
           }
         },
         {
           "submission": "2dcnn-baseline",
-          "model": "2D CNN Baseline",
-          "model_class": "3-layer 2D CNN",
-          "features": "3-layer grid (3x18x11)",
+          "model": "2dcnn-baseline",
+          "model_class": "",
+          "features": "",
           "exact_accuracy": {
-            "mean": 0.282,
-            "std": 0.0252
+            "mean": 0.2847548749749643,
+            "std": 0.023514180238323332
           },
           "within_one_grade": {
-            "mean": 0.4973,
-            "std": 0.0384
+            "mean": 0.5130194966164933,
+            "std": 0.041195872403292096
           },
           "within_two_grades": {
-            "mean": 0.709,
-            "std": 0.0424
+            "mean": 0.7216696563521605,
+            "std": 0.059386377536325134
           },
           "macro_f1": {
-            "mean": 0.1238,
-            "std": 0.0
+            "mean": 0.13263063449065787,
+            "std": 0.012450231958142733
+          }
+        },
+        {
+          "submission": "coral-engineered-temp",
+          "model": "Coral Temperature",
+          "model_class": "Focal ordinal with temperature scaling",
+          "features": "198-dim binary hold vector",
+          "exact_accuracy": {
+            "mean": 0.2842349132152125,
+            "std": 0.005214219177472984
+          },
+          "within_one_grade": {
+            "mean": 0.6049277140014687,
+            "std": 0.0060606125826864156
+          },
+          "within_two_grades": {
+            "mean": 0.8195422278939299,
+            "std": 0.0071990807242876985
+          },
+          "macro_f1": {
+            "mean": 0.17308846119396679,
+            "std": 0.004025254488394453
+          }
+        },
+        {
+          "submission": "coral-engineered-gamma3",
+          "model": "Coral Gamma=3.0",
+          "model_class": "Focal ordinal (gamma=3.0)",
+          "features": "198-dim binary hold vector",
+          "exact_accuracy": {
+            "mean": 0.2811483593576426,
+            "std": 0.007258497538354456
+          },
+          "within_one_grade": {
+            "mean": 0.6042472504561142,
+            "std": 0.00792536130817649
+          },
+          "within_two_grades": {
+            "mean": 0.822366933458247,
+            "std": 0.006532956456324516
+          },
+          "macro_f1": {
+            "mean": 0.1702056807774089,
+            "std": 0.0070621409309461645
           }
         },
         {
           "submission": "ordinal-regression",
-          "model": "Ordinal Regression (CORAL)",
-          "model_class": "CORAL ordinal regression MLP (198->256->128->13)",
-          "features": "198-dim binary hold vector, per-fold standardized",
+          "model": "ordinal-regression",
+          "model_class": "",
+          "features": "",
           "exact_accuracy": {
-            "mean": 0.2206,
-            "std": 0.0027
+            "mean": 0.2691710709348942,
+            "std": 0.007748295772501422
           },
           "within_one_grade": {
-            "mean": 0.5696,
-            "std": 0.0012
+            "mean": 0.5961928708313587,
+            "std": 0.009454595467777466
           },
           "within_two_grades": {
-            "mean": 0.7879,
-            "std": 0.0037
+            "mean": 0.8097084153718355,
+            "std": 0.005320793794705945
           },
           "macro_f1": {
-            "mean": 0.1393,
-            "std": 0.0026
+            "mean": 0.15864946559638646,
+            "std": 0.005037146028857303
           }
         },
         {
           "submission": "ridge-baseline",
-          "model": "Ridge Regression",
-          "model_class": "RidgeClassifierCV (sklearn)",
-          "features": "164-dim compressed grid vector via GridMapper or 198-dim hold vector",
+          "model": "ridge-baseline",
+          "model_class": "",
+          "features": "",
           "exact_accuracy": {
-            "mean": 0.1995,
-            "std": 0.0063
+            "mean": 0.19954989181315033,
+            "std": 0.006268163502179025
           },
           "within_one_grade": {
-            "mean": 0.5617,
-            "std": 0.0061
+            "mean": 0.5616698560901481,
+            "std": 0.006064921822561882
           },
           "within_two_grades": {
-            "mean": 0.7937,
-            "std": 0.0085
+            "mean": 0.7936501515272567,
+            "std": 0.008530607145135434
           },
           "macro_f1": {
-            "mean": 0.1211,
-            "std": 0.0031
+            "mean": 0.12108246220132997,
+            "std": 0.003127576722059883
           }
         }
       ]

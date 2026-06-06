@@ -1,0 +1,46 @@
+{
+  "fold_results": [
+    {
+      "exact_accuracy": 0.3879176379176379,
+      "within_one_grade": 0.6351981351981352,
+      "within_two_grades": 0.8333333333333334,
+      "macro_f1": 0.1623392317849015
+    },
+    {
+      "exact_accuracy": 0.3525641025641026,
+      "within_one_grade": 0.6318958818958819,
+      "within_two_grades": 0.8294483294483295,
+      "macro_f1": 0.17671140843154168
+    },
+    {
+      "exact_accuracy": 0.3661616161616162,
+      "within_one_grade": 0.6507381507381508,
+      "within_two_grades": 0.8434343434343434,
+      "macro_f1": 0.18019789683801687
+    },
+    {
+      "exact_accuracy": 0.3648727414027589,
+      "within_one_grade": 0.6279386050126288,
+      "within_two_grades": 0.8441810763551584,
+      "macro_f1": 0.18518686037673238
+    },
+    {
+      "exact_accuracy": 0.380998639984457,
+      "within_one_grade": 0.6244414221876822,
+      "within_two_grades": 0.8377695745094229,
+      "macro_f1": 0.18587173744745356
+    }
+  ],
+  "mean_scores": {
+    "exact_accuracy": 0.37050294760611446,
+    "within_one_grade": 0.6340424390064958,
+    "within_two_grades": 0.8376333314161176,
+    "macro_f1": 0.1780614269757292
+  },
+  "std_scores": {
+    "exact_accuracy": 0.0125361839424258,
+    "within_one_grade": 0.009100840013128981,
+    "within_two_grades": 0.005692583018761371,
+    "macro_f1": 0.008548066751932369
+  }
+}

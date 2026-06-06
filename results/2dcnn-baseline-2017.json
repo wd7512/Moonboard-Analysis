@@ -1,0 +1,28 @@
+{
+  "fold_results": [
+    {
+      "exact_accuracy": 0.25682602782717856,
+      "within_one_grade": 0.4589392195836385,
+      "within_two_grades": 0.6665969243644733,
+      "macro_f1": 0.12382913885586648
+    },
+    {
+      "exact_accuracy": 0.30714509885971336,
+      "within_one_grade": 0.5357254942985668,
+      "within_two_grades": 0.7513338215294487,
+      "macro_f1": 0.12375888933930829
+    }
+  ],
+  "mean_scores": {
+    "exact_accuracy": 0.28198556334344593,
+    "within_one_grade": 0.4973323569411026,
+    "within_two_grades": 0.7089653729469609,
+    "macro_f1": 0.12379401409758739
+  },
+  "std_scores": {
+    "exact_accuracy": 0.0251595355162674,
+    "within_one_grade": 0.038393137357464135,
+    "within_two_grades": 0.04236844858248773,
+    "macro_f1": 3.5124758279096724e-05
+  }
+}
