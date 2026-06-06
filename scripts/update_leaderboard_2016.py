@@ -70,7 +70,7 @@ def main():
         reverse=True,
     )
     
-    with open(LEADERBOARD_PATH, "w") as f:
+    with open(LEADERBOARD_PATH, "w", encoding="utf-8") as f:
         json.dump(leaderboard, f, indent=2)
     
     print(f"\nUpdated {updated} entries. Leaderboard written.")
