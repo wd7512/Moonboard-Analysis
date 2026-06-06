@@ -65,7 +65,7 @@ def evaluate_classification(
         "per_class_precision": precision.tolist(),
         "per_class_recall": recall.tolist(),
         "per_class_f1": f1.tolist(),
-        "macro_f1": float(np.mean(f1)),
+        "macro_f1": float(np.mean(f1[support > 0])) if support.any() else 0.0,
         "weighted_f1": float(np.average(f1, weights=support)),
     }
 
