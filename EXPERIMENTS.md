@@ -14,9 +14,23 @@ All experiments below use the 2016 Moonboard dataset unless otherwise stated.
 
 ### 1.1 Grade Taxonomy
 
-GRADE_ORDER (12 classes): 6A, 6A+, 6B+, 6C, 6C+, 7A, 7A+, 7B, 7B+, 7C, 7C+, 8A
+GRADE_ORDER (13 classes): 6A, 6A+, 6B, 6B+, 6C, 6C+, 7A, 7A+, 7B, 7B+, 7C, 7C+, 8A
 
-**Note:** Grades 8A+, 8B, 8B+ are excluded due to insufficient samples.
+**CRITICAL CORRECTION (2026-06-06):** The actual 2016 dataset contains only 10 of these 13 classes. Classes 6A, 6A+, and 6B have ZERO samples in the dataset. The actual distribution after dedup:
+- 6B+: 8,369 (32.5%) — NOT 6B as previously assumed
+- 6C+: 3,838 (14.9%)
+- 7A: 3,564 (13.8%)
+- 7A+: 2,765 (10.7%)
+- 7B+: 1,541 (6.0%)
+- 6C: 2,605 (10.1%)
+- 7B: 1,213 (4.7%)
+- 7C: 1,211 (4.7%)
+- 7C+: 434 (1.7%)
+- 8A: 198 (0.8%)
+
+**This is NOT a bell curve centered on 7A-7B+.** It is heavily right-skewed with 6B+ as the mode (32.5%). The previous assumption about the distribution was WRONG and led to incorrect conclusions about the F1 ceiling.
+
+Grades 8A+, 8B, 8B+ are excluded due to insufficient samples.
 
 ### 1.2 Preprocessing Pipeline (fixed across all experiments)
 
@@ -566,3 +580,58 @@ Before creating a new submission, verify ALL of the following:
 *Last updated: 2026-05-29*
 *Maintained by: OWL for Moonboard-Analysis project*
 *Protocol: v2 (5-fold retrain-per-fold CV)*
+
+---
+
+## 12. Session Results (2026-06-06): Systematic F1 Optimization
+
+### 12.1 Critical Data Audit
+
+**GRADE_ORDER has 13 classes but only 10 have data.** Classes 6A, 6A+, 6B have ZERO samples.
+
+**Actual distribution (after dedup, 25,738 sequences):**
+| Grade | Count | Pct |
+|-------|-------|-----|
+| 6B+ | 8,369 | 32.5% |
+| 6C+ | 3,838 | 14.9% |
+| 7A | 3,564 | 13.8% |
+| 7A+ | 2,765 | 10.7% |
+| 7B+ | 1,541 | 6.0% |
+| 6C | 2,605 | 10.1% |
+| 7B | 1,213 | 4.7% |
+| 7C | 1,211 | 4.7% |
+| 7C+ | 434 | 1.7% |
+| 8A | 198 | 0.8% |
+
+**NOT a bell curve centered on 7A-7B+.** Heavily right-skewed with 6B+ as mode.
+
+### 12.2 Protocol v1 vs Protocol v2
+
+The 19.48% macro-F1 cited in earlier sections was from **Protocol v1** (data leakage via hold-swap augmentation across CV folds). Not reproducible on current benchmark harness (Protocol v2). Real best before this session: **17.15%** (ordinal regression).
+
+### 12.3 Results Summary
+
+| Approach | F1 | Delta | Notes |
+|----------|-----|-------|-------|
+| Single ordinal (flat 198-dim) | 17.15% | baseline | Leaderboard |
+| Dual-ordinal ensemble (logit avg) | 17.49% | +0.34pp | Best BCE |
+| **Focal ordinal ensemble (γ=2.0)** | **17.77%** | **+0.62pp** | **New best** |
+| Hierarchical (3 groups) | 16.33% | -0.82pp | Error propagation |
+| Gradient boosting (balanced) | 16.50% | -0.65pp | Worse within-2 |
+| Targeted rare augmentation | 17.43% | +0.28pp | No improvement |
+| Class-balanced ordinal | 17.08% | -0.07pp | No improvement |
+
+### 12.4 Key Findings
+
+1. **Focal loss helps** — γ=2.0 on ordinal thresholds gives +0.62pp over single ordinal
+2. **Logit averaging >> probability averaging** for ordinal ensembles
+3. **Architectural diversity > seed diversity** for ensemble diversity
+4. **Augmentation doesn't help** — hold-swap variants are too similar to originals
+5. **Hierarchical classification hurts** — group-level errors propagate
+
+### 12.5 Current Best
+
+`submissions/coral-engineered/` — Focal ordinal ensemble (γ=2.0), 17.77% F1 on 2016.
+Triple ensemble (focal + BCE + class-balanced CE) benchmark is currently running.
+
+*Last updated: 2026-06-06*
