@@ -259,6 +259,18 @@ def _train_epoch(model, loader, criterion, optimizer, device):
     return total_loss / max(n_batches, 1)
 
 
+def _eval_loss(model, loader, criterion, device):
+    model.eval()
+    total_loss = 0.0
+    n_batches = 0
+    with torch.no_grad():
+        for xb, yb in loader:
+            xb, yb = xb.to(device), yb.to(device)
+            total_loss += criterion(model(xb), yb).item()
+            n_batches += 1
+    return total_loss / max(n_batches, 1)
+
+
 def _extract_logits(model, loader, device):
     all_logits = []
     model.eval()
@@ -277,7 +289,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--data-path", type=str, default="Raw/moonboard_problems_setup_2016.json")
     parser.add_argument("--output-dir", type=str, default=".")
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--epochs", type=int, default=200)
+    parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--patience", type=int, default=25)
     parser.add_argument("--batch-size", type=int, default=256)
     parser.add_argument("--learning-rate", type=float, default=0.001)
@@ -322,6 +334,7 @@ def train_and_evaluate(
         torch.tensor(y_train_ord, dtype=torch.float32),
     )
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
+    eval_loader = DataLoader(train_ds, batch_size=batch_size * 2, shuffle=False)
     test_loader = DataLoader(
         TensorDataset(torch.tensor(X_test, dtype=torch.float32)),
         batch_size=batch_size * 2,
@@ -347,11 +360,10 @@ def train_and_evaluate(
         best_epoch = 0
         for epoch in range(epochs):
             _ = _train_epoch(model, train_loader, criterion, optimizer, device)
-            # Use train loss for early stopping (no leakage)
-            train_loss = _train_epoch(model, train_loader, criterion, optimizer, device)
-            scheduler.step(train_loss)
-            if train_loss < best_loss:
-                best_loss = train_loss
+            val_loss = _eval_loss(model, eval_loader, criterion, device)
+            scheduler.step(val_loss)
+            if val_loss < best_loss:
+                best_loss = val_loss
                 best_epoch = epoch
                 best_state = {k: v.cpu().clone() for k, v in model.state_dict().items()}
             if epoch - best_epoch >= patience:
