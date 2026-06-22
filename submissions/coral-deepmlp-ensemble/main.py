@@ -289,8 +289,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--data-path", type=str, default="Raw/moonboard_problems_setup_2016.json")
     parser.add_argument("--output-dir", type=str, default=".")
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--epochs", type=int, default=100)
-    parser.add_argument("--patience", type=int, default=25)
+    parser.add_argument("--epochs", type=int, default=30)
+    parser.add_argument("--patience", type=int, default=10)
     parser.add_argument("--batch-size", type=int, default=256)
     parser.add_argument("--learning-rate", type=float, default=0.001)
     parser.add_argument("--dropout", type=float, default=0.15)
@@ -343,7 +343,7 @@ def train_and_evaluate(
     criterion = FocalBCELoss(gamma=focal_gamma)
 
     all_logits: list[np.ndarray] = []
-    for ensemble_seed in (seed, seed + 1, seed + 2, seed + 3, seed + 4):
+    for ensemble_seed in (seed, seed + 1, seed + 2):
         set_seeds(ensemble_seed)
         model = CORALNet(
             input_dim=INPUT_DIM,
