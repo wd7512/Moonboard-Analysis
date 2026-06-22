@@ -47,9 +47,10 @@ NUM_ROWS = 18
 HOLD_VECTOR_DIM = NUM_COLS * NUM_ROWS  # 198
 EXTRA_FEATURES = 62  # 8 meta + 50 bigram + 3 ratios + 1 symmetry
 INPUT_DIM = HOLD_VECTOR_DIM * 3 + EXTRA_FEATURES  # 656
-NUM_CLASSES = len(GRADE_ORDER)  # 13
-NUM_THRESHOLDS = NUM_CLASSES - 1  # 12
-GRADE_LABELS = frozenset(GRADE_ORDER)
+NUM_CLASSES = 10
+NUM_THRESHOLDS = NUM_CLASSES - 1  # 9
+GRADE_10CLASS = ["6B+", "6C", "6C+", "7A", "7A+", "7B", "7B+", "7C", "7C+", "8A"]
+GRADE_LABELS = frozenset(GRADE_10CLASS)
 
 
 def _hold_to_index(hold_name: str) -> int:
