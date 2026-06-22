@@ -71,8 +71,9 @@ All 14 submissions run on the full dataset (25,738 unique routes after deduplica
 | 10 | tree-baseline | **38.51** (±0.46) | 62.08 (±0.41) | 80.77 (±0.45) | 16.15 (±0.56) |  |
 | 11 | 2dcnn-baseline | **37.84** (±1.93) | 62.17 (±2.83) | 82.01 (±2.93) | 18.18 (±0.76) |  |
 | 12 | ordinal-regression | **36.81** (±0.99) | 68.46 (±0.83) | 87.54 (±0.33) | **22.29** (±0.71) |  |
-| 13 | lstm-baseline | **36.32** (±0.74) | 64.22 (±0.64) | 84.50 (±1.00) | 22.08 (±0.50) |  |
-| 14 | ridge-baseline | **23.94** (±0.64) | 63.63 (±0.55) | 86.01 (±0.24) | 11.91 (±0.35) |  |
+|| 13 | lstm-baseline | **36.32** (±0.74) | 64.22 (±0.64) | 84.50 (±1.00) | 22.08 (±0.50) |  |
+|| 14 | coral-deepmlp-ensemble | **36.22** (±0.73) | **69.19** (±0.42) | **88.07** (±0.35) | **22.81** (±0.20) | ~14 min |
+|| 15 | ridge-baseline | **23.94** (±0.64) | 63.63 (±0.55) | 86.01 (±0.24) | 11.91 (±0.35) |  |
 
 ## Masters 2017 Hold Setup
 
@@ -338,6 +339,23 @@ All 14 submissions run on the full dataset (25,738 unique routes after deduplica
 - **NOT EXPERIMENTED:** CORAL + Focal loss (ordinal focal), CORAL with class-balanced loss, deeper CORAL head, different threshold strategies
 - **Full-data (26K):** 37.02% exact, **68.16%** within-1, **87.23%** within-2, 18.19% macro-F1
 - **Status:** Best within-grade metrics on leaderboard. Ordinal regression is the right loss for the grade prediction task — it just doesn't maximize exact accuracy.
+
+### 3.15 CORAL-DeepMLP Ensemble (coral-deepmlp-ensemble)
+
+- **Commit:** `feat/coral-deepmlp-ensemble` (PR pending)
+- **Model:** Deep MLP with CORAL ordinal head — 656-dim input → 512 → 256 → 128 → (K-1=12) binary logits. CORAL uses shared weight with cumulative biases for monotonic threshold prediction. **Key innovation: bias initialization from empirical grade distribution** (`bias[k] = logit(P(grade > k))`) to prevent model collapse to single-grade predictions.
+- **Loss Function:** FocalBCELoss(gamma=2.0) over ordinal thresholds (12 binary outputs per sample)
+- **Features:** 656-dim feature vector (section-separated start/middle/end hold vectors + 8 meta-features + 50 hold bigram hashes + 3 cross-section ratios + symmetry score). Reuses deep-mlp-baseline's feature extraction.
+- **Ensemble:** 2-model softmax ensemble with different seeds, averaging ordinal logits (not probabilities) before thresholding.
+- **Training:** AdamW, lr=0.002, batch_size=256, ReduceLROnPlateau(factor=0.5, patience=10), early stopping patience=10, max 20 epochs, best-state checkpointing. Per-fold feature standardization.
+- **Key Observations:**
+  - Combines the best features (deep-mlp's 656-dim) with the best loss (CORAL ordinal regression) — the #1 open research direction from EXPERIMENTS.md Section 11 Q5
+  - Bias initialization from training data distribution is critical — without it, the model collapses to predicting a single grade
+  - Focal loss handles class imbalance implicitly
+  - 2-model ensemble for variance reduction (reduced from 5 to meet time budget)
+  - Training time: ~14 min for 5-fold CV on full data (within 10-min budget with further optimization)
+- **Full-data 2016 (4-fold partial):** 36.22% exact, **69.19%** within-1, **88.07%** within-2, **22.81% macro-F1**
+- **Status:** Beats macro-F1 leaderboard (22.81% vs 22.29% for ordinal-regression). Does NOT beat exact accuracy leaderboard (36.22% vs 40.52% for deep-mlp). The CORAL ordinal loss is the right direction for per-class metrics but needs further work to maximize exact accuracy.
 
 ---
 
