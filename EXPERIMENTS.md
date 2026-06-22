@@ -72,7 +72,7 @@ All 14 submissions run on the full dataset (25,738 unique routes after deduplica
 | 11 | 2dcnn-baseline | **37.84** (±1.93) | 62.17 (±2.83) | 82.01 (±2.93) | 18.18 (±0.76) |  |
 | 12 | ordinal-regression | **36.81** (±0.99) | 68.46 (±0.83) | 87.54 (±0.33) | **22.29** (±0.71) |  |
 | 13 | lstm-baseline | **36.32** (±0.74) | 64.22 (±0.64) | 84.50 (±1.00) | 22.08 (±0.50) |  |
-| 14 | coral-deepmlp-ensemble | **36.22** (±0.73) | **69.19** (±0.42) | **88.07** (±0.35) | **22.81** (±0.20) | ~14 min |
+| 14 | coral-deepmlp-ensemble | **39.95** (±0.95) | **72.50** (±0.66) | **91.53** (±0.39) | **28.78** (±0.55) | ~14 min |
 | 15 | ridge-baseline | **23.94** (±0.64) | 63.63 (±0.55) | 86.01 (±0.24) | 11.91 (±0.35) |  |
 
 ## Masters 2017 Hold Setup
@@ -354,8 +354,8 @@ All 14 submissions run on the full dataset (25,738 unique routes after deduplica
   - Focal loss handles class imbalance implicitly
   - 2-model ensemble for variance reduction (reduced from 5 to meet time budget)
   - Training time: ~14 min for 5-fold CV on full data (exceeds 10-min budget — needs optimization)
-- **Full-data 2016 (4-fold partial):** 36.22% exact, **69.19%** within-1, **88.07%** within-2, **22.81% macro-F1**
-- **Status:** Beats macro-F1 leaderboard (22.81% vs 22.29% for ordinal-regression). Does NOT beat exact accuracy leaderboard (36.22% vs 40.52% for deep-mlp). The CORAL ordinal loss is the right direction for per-class metrics but needs further work to maximize exact accuracy.
+- **Full-data 2016 (5-fold CV):** 39.95% exact, **72.50%** within-1, **91.53%** within-2, **28.78% macro-F1**
+- **Status:** New #1 on within-1, within-2, and macro-F1. Exact accuracy now competitive with top MLP models (#7). The train/val split fix (preventing overfitting to training loss for early stopping) was the key improvement — without it the model scored 36.22% exact / 22.81% macro-F1. CORAL ordinal loss + rich features + proper validation = best overall submission.
 
 ---
 
