@@ -63,7 +63,6 @@ moonboard-benchmark --submission-dir submissions/2dcnn-baseline --data-path Raw/
 ```
 
 ---
-
 ## Leaderboard
 
 Results are mean +/- std across 5 stratified folds on the full dataset (25,738 unique routes after deduplication and preprocessing). Within-metrics use the corrected (bug-fixed) calculation.
@@ -76,6 +75,7 @@ Results are mean +/- std across 5 stratified folds on the full dataset (25,738 u
 
 | Model | Exact (%) | Within +/-1 (%) | Within +/-2 (%) | Macro-F1 (%) |
 |-------|-----------|-----------------|-----------------|--------------|
+| DeepMLP-10class | **42.93 ± 0.71** | 67.88 ± 0.31 | 87.31 ± 0.63 | **24.60 ± 1.02** |
 | DeepMLP (ensemble) | 40.52 ± 0.63 | 65.11 ± 0.60 | 84.35 ± 0.61 | 19.58 ± 0.68 |
 | FastMLP | 40.26 ± 0.74 | 65.34 ± 0.67 | 84.38 ± 0.68 | 19.13 ± 0.95 |
 | Bottom-to-Top LSTM | 40.07 ± 0.80 | 64.42 ± 1.47 | 83.37 ± 1.52 | 18.14 ± 0.61 |
@@ -87,6 +87,8 @@ Results are mean +/- std across 5 stratified folds on the full dataset (25,738 u
 | Multi-Channel 2D CNN | 39.44 ± 0.78 | 62.61 ± 0.98 | 81.44 ± 0.74 | 17.60 ± 1.20 |
 | Random Forest | 38.51 ± 0.46 | 62.08 ± 0.41 | 80.77 ± 0.45 | 16.15 ± 0.56 |
 | 2D CNN Baseline | 37.84 ± 1.93 | 62.17 ± 2.83 | 82.01 ± 2.93 | 18.18 ± 0.76 |
+| CORAL-DeepMLP Ensemble (10-class) | 39.95 ± 0.95 | **72.50 ± 0.66** | **91.53 ± 0.39** | **28.78 ± 0.55** |
+| CORAL-DeepMLP Ensemble (13-class) | 36.30 ± 0.61 | 70.04 ± 0.56 | 88.80 ± 0.46 | 23.23 ± 0.39 |
 | Ordinal Regression (CORAL) | 36.81 ± 0.99 | 68.46 ± 0.83 | 87.54 ± 0.33 | 22.29 ± 0.71 |
 | LSTM Baseline | 36.32 ± 0.74 | 64.22 ± 0.64 | 84.50 ± 1.00 | 22.08 ± 0.50 |
 | Ridge Regression | 23.94 ± 0.64 | 63.63 ± 0.55 | 86.01 ± 0.24 | 11.91 ± 0.35 |
@@ -105,6 +107,7 @@ Results are mean +/- std across 5 stratified folds on the full dataset (25,738 u
 | Multi-Channel 2D CNN | 30.77 ± 0.41 | 54.22 ± 0.11 | 74.97 ± 0.77 | 13.05 ± 0.01 |
 | Gradient Boost | 30.46 ± 0.02 | 54.80 ± 0.24 | 75.58 ± 0.63 | 17.12 ± 0.19 |
 | LSTM Baseline | 29.61 ± 0.19 | 54.80 ± 0.21 | 76.67 ± 1.52 | 16.29 ± 0.32 |
+| CORAL-DeepMLP Ensemble (13-class) | 28.90 ± 0.41 | 61.09 ± 0.68 | 81.93 ± 0.75 | 18.02 ± 0.43 |
 | Class-Balanced Loss (MLP) | 28.94 ± 0.13 | 52.92 ± 0.97 | 71.98 ± 1.06 | 15.86 ± 0.61 |
 | 2D CNN Baseline | 28.20 ± 2.52 | 49.73 ± 3.84 | 70.90 ± 4.24 | 12.38 ± 0.00 |
 | Ordinal Regression (CORAL) | 22.06 ± 0.27 | 56.96 ± 0.12 | 78.79 ± 0.37 | 13.93 ± 0.26 |
@@ -114,20 +117,10 @@ Results are mean +/- std across 5 stratified folds on the full dataset (25,738 u
 
 | Model | 2016 Exact (%) | 2017 Exact (%) | 2016 Macro-F1 (%) | 2017 Macro-F1 (%) |
 |-------|---------------|---------------|-------------------|-------------------|
-| 2D CNN Baseline | 37.84 ± 1.93 | 28.20 ± 2.52 | 18.18 ± 0.76 | 12.38 ± 0.00 |
-| Bottom-to-Top LSTM | 40.07 ± 0.80 | 31.65 ± 0.32 | 18.14 ± 0.61 | 14.18 ± 0.26 |
-| Class-Balanced Loss (MLP) | 39.54 ± 0.57 | 28.94 ± 0.13 | 20.71 ± 1.36 | 15.86 ± 0.61 |
+| DeepMLP-10class | **42.93 ± 0.71** | pending | **24.60 ± 1.02** | pending |
 | DeepMLP (ensemble) | 40.52 ± 0.63 | 32.14 ± 0.18 | 19.58 ± 0.68 | 13.94 ± 0.18 |
-| FastMLP | 40.26 ± 0.74 | 31.81 ± 0.03 | 19.13 ± 0.95 | 13.49 ± 0.92 |
-| Focal Loss (MLP) | 39.87 ± 1.53 | 31.96 ± 0.20 | 17.66 ± 2.74 | 14.94 ± 0.02 |
-| Gradient Boost | 39.49 ± 0.48 | 30.46 ± 0.02 | 15.40 ± 0.42 | 17.12 ± 0.19 |
-| LSTM Baseline | 36.32 ± 0.74 | 29.61 ± 0.19 | 22.08 ± 0.50 | 16.29 ± 0.32 |
-| Multi-Channel 2D CNN | 39.44 ± 0.78 | 30.77 ± 0.41 | 17.60 ± 1.20 | 13.05 ± 0.01 |
-| Ordinal Regression (CORAL) | 36.81 ± 0.99 | 22.06 ± 0.27 | 22.29 ± 0.71 | 13.93 ± 0.26 |
-| Perceptron Baseline | 39.65 ± 0.60 | 31.57 ± 0.21 | 20.20 ± 0.70 | 16.66 ± 0.07 |
-| Ridge Regression | 23.94 ± 0.64 | 19.95 ± 0.63 | 11.91 ± 0.35 | 12.11 ± 0.31 |
-| Transformer Encoder | 39.75 ± 0.94 | 31.34 ± 0.36 | 18.90 ± 0.57 | 14.06 ± 0.55 |
-| Random Forest | 38.51 ± 0.46 | 31.41 ± 0.33 | 16.15 ± 0.56 | 17.11 ± 0.66 |
+| CORAL-DeepMLP (10-class) | 39.95 ± 0.95 | pending | **28.78 ± 0.55** | pending |
+| CORAL-DeepMLP (13-class) | 36.30 ± 0.61 | 28.90 ± 0.41 | 23.23 ± 0.39 | 18.02 ± 0.43 |
 
 <!-- LEADERBOARD-END -->
 

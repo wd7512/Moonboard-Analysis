@@ -293,6 +293,28 @@
           }
         },
         {
+          "submission": "coral-deepmlp-ensemble",
+          "model": "CORAL-DeepMLP Ensemble",
+          "model_class": "CORAL ordinal head + DeepMLP features + FocalBCELoss, 2-model ensemble",
+          "features": "656-dim: section-separated + bigram + meta",
+          "exact_accuracy": {
+            "mean": 0.3995,
+            "std": 0.0095
+          },
+          "within_one_grade": {
+            "mean": 0.7250,
+            "std": 0.0066
+          },
+          "within_two_grades": {
+            "mean": 0.9153,
+            "std": 0.0039
+          },
+          "macro_f1": {
+            "mean": 0.2878,
+            "std": 0.0055
+          }
+        },
+        {
           "submission": "ridge-baseline",
           "model": "Ridge Regression",
           "model_class": "RidgeClassifierCV (sklearn)",
