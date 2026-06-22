@@ -138,6 +138,9 @@ def _sequences_to_features(sequences: list[list[str]]) -> np.ndarray:
         if all_holds:
             idxs = [_hold_to_index(h) for h in all_holds]
             idxs = [idx for idx in idxs if 0 <= idx < HOLD_VECTOR_DIM]
+        else:
+            idxs = []
+        if idxs:
             rows = [idx // NUM_COLS for idx in idxs]
             cols = [idx % NUM_COLS for idx in idxs]
             features[i, base + 4] = (max(rows) - min(rows) + 1) / NUM_ROWS
@@ -155,9 +158,7 @@ def _sequences_to_features(sequences: list[list[str]]) -> np.ndarray:
         features[i, base + 8 + HASH_BINS + 0] = n_s / (n_total + eps)
         features[i, base + 8 + HASH_BINS + 1] = n_m / (n_total + eps)
         features[i, base + 8 + HASH_BINS + 2] = n_e / (n_total + eps)
-        if all_holds:
-            idxs = [_hold_to_index(h) for h in all_holds]
-            idxs = [idx for idx in idxs if 0 <= idx < HOLD_VECTOR_DIM]
+        if idxs:
             cols_i = [idx % NUM_COLS for idx in idxs]
             n_left = sum(1 for c in cols_i if c < 5)
             n_right = sum(1 for c in cols_i if c > 5)
@@ -320,20 +321,21 @@ def train_and_evaluate(
     X_train = _sequences_to_features(train_seqs)
     X_test = _sequences_to_features(test_seqs)
 
-    feat_mean = X_train.mean(axis=0)
-    feat_std = X_train.std(axis=0) + 1e-8
-    X_train = (X_train - feat_mean) / feat_std
+    from sklearn.model_selection import train_test_split as _tts
+    X_tr, X_val, y_tr, y_val = _tts(
+        X_train, y_train, test_size=0.1, random_state=seed, stratify=y_train,
+    )
+    feat_mean = X_tr.mean(axis=0)
+    feat_std = X_tr.std(axis=0) + 1e-8
+    X_tr = (X_tr - feat_mean) / feat_std
+    X_val = (X_val - feat_mean) / feat_std
     X_test = (X_test - feat_mean) / feat_std
 
-    y_train_ord = _labels_to_ordinal(y_train, NUM_THRESHOLDS)
-    bias_init = _compute_bias_init(y_train, NUM_THRESHOLDS)
-
+    y_tr_ord = _labels_to_ordinal(y_tr, NUM_THRESHOLDS)
+    y_val_ord = _labels_to_ordinal(y_val, NUM_THRESHOLDS)
+    bias_init = _compute_bias_init(y_tr, NUM_THRESHOLDS)
     device = get_device()
 
-    from sklearn.model_selection import train_test_split as _tts
-    X_tr, X_val, y_tr_ord, y_val_ord = _tts(
-        X_train, y_train_ord, test_size=0.1, random_state=seed, stratify=y_train,
-    )
     train_ds = TensorDataset(
         torch.tensor(X_tr, dtype=torch.float32),
         torch.tensor(y_tr_ord, dtype=torch.float32),
@@ -352,7 +354,7 @@ def train_and_evaluate(
     criterion = FocalBCELoss(gamma=focal_gamma)
 
     all_logits: list[np.ndarray] = []
-    for ensemble_seed in (seed, seed + 1, seed + 2, seed + 3, seed + 4):
+    for ensemble_seed in (seed, seed + 1):
         set_seeds(ensemble_seed)
         model = CORALNet(
             input_dim=INPUT_DIM,

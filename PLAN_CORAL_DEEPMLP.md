@@ -1,7 +1,7 @@
 # Plan: CORAL-DeepMLP Ensemble — Beat Moonboard Leaderboard
 
 ## Goal
-Significantly beat the current leaderboard on BOTH exact accuracy and macro-F1, on both 2016 and 2017 datasets.
+Maximize macro-F1 on the 2016 benchmark while staying within the 10-minute compute budget.
 
 ## Current Best (2016)
 - Exact: 40.52% (deep-mlp-baseline, 656-dim features, 5-model CE ensemble)
@@ -29,7 +29,7 @@ Same 656-dim feature vector:
 Per-fold standardization (zero mean, unit variance, fit on train only)
 
 ### Model: CORALNet
-```
+```text
 Input(656) → Linear(512) → BatchNorm → LeakyReLU(0.1) → Dropout(0.15)
             → Linear(256) → BatchNorm → LeakyReLU(0.1) → Dropout(0.15)
             → Linear(128) → BatchNorm → LeakyReLU(0.1) → Dropout(0.15)
@@ -39,7 +39,7 @@ Kaiming normal initialization.
 
 ### CRITICAL: Bias Initialization
 Initialize coral_bias from the empirical grade distribution of the training fold:
-```
+```text
 For each threshold k: bias[k] = logit(P(grade > k))
 where P(grade > k) = fraction of training samples with label > k
 ```
@@ -50,15 +50,15 @@ This gives the model a strong starting point. Without this, the model collapses 
 - Focal loss: FL = -(1-p_t)^γ * BCE, γ=2.0
 
 ### Training
-- AdamW, lr=0.001, weight_decay=1e-4
+- AdamW, lr=0.002, weight_decay=1e-4
 - Batch size: 256
 - ReduceLROnPlateau(factor=0.5, patience=10)
-- Early stopping patience=25
-- Max epochs: 200
+- Early stopping patience=10
+- Max epochs: 20
 - Best-state checkpointing
 
 ### Ensemble
-- 5-model ensemble with seeds: seed, seed+1, seed+2, seed+3, seed+4
+- 2-model ensemble with seeds: seed, seed+1
 - Average ordinal logits (not probabilities) before converting to labels
 
 ### Prediction
@@ -90,4 +90,4 @@ This gives the model a strong starting point. Without this, the model collapses 
 - NO data leakage: all preprocessing inside train_and_evaluate, per-fold standardization
 - MPS-safe: no src_key_padding_mask, no Transformer
 - Code must pass `uv run ruff check`
-- The test_loader in _extract_logits should handle both (features, targets) and (features,) only tuples
+- The test_loader in `_extract_logits` should handle both (features, targets) and (features,) only tuples
