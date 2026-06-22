@@ -86,9 +86,9 @@ Results are mean +/- std across 5 stratified folds on the full dataset (25,738 u
 | Gradient Boost | 39.49 ± 0.48 | 62.20 ± 0.44 | 80.78 ± 0.31 | 15.40 ± 0.42 |
 | Multi-Channel 2D CNN | 39.44 ± 0.78 | 62.61 ± 0.98 | 81.44 ± 0.74 | 17.60 ± 1.20 |
 | Random Forest | 38.51 ± 0.46 | 62.08 ± 0.41 | 80.77 ± 0.45 | 16.15 ± 0.56 |
-|| 2D CNN Baseline | 37.84 ± 1.93 | 62.17 ± 2.83 | 82.01 ± 2.93 | 18.18 ± 0.76 |
-|| CORAL-DeepMLP Ensemble | 36.30 ± 0.61 | **70.04 ± 0.56** | **88.80 ± 0.46** | **23.23 ± 0.39** |
-|| Ordinal Regression (CORAL) | 36.81 ± 0.99 | 68.46 ± 0.83 | 87.54 ± 0.33 | 22.29 ± 0.71 |
+| 2D CNN Baseline | 37.84 ± 1.93 | 62.17 ± 2.83 | 82.01 ± 2.93 | 18.18 ± 0.76 |
+| CORAL-DeepMLP Ensemble | 36.30 ± 0.61 | **70.04 ± 0.56** | **88.80 ± 0.46** | **23.23 ± 0.39** |
+| Ordinal Regression (CORAL) | 36.81 ± 0.99 | 68.46 ± 0.83 | 87.54 ± 0.33 | 22.29 ± 0.71 |
 | LSTM Baseline | 36.32 ± 0.74 | 64.22 ± 0.64 | 84.50 ± 1.00 | 22.08 ± 0.50 |
 | Ridge Regression | 23.94 ± 0.64 | 63.63 ± 0.55 | 86.01 ± 0.24 | 11.91 ± 0.35 |
 
@@ -105,9 +105,10 @@ Results are mean +/- std across 5 stratified folds on the full dataset (25,738 u
 | Transformer Encoder | 31.34 ± 0.36 | 56.29 ± 0.10 | 76.91 ± 0.96 | 14.06 ± 0.55 |
 | Multi-Channel 2D CNN | 30.77 ± 0.41 | 54.22 ± 0.11 | 74.97 ± 0.77 | 13.05 ± 0.01 |
 | Gradient Boost | 30.46 ± 0.02 | 54.80 ± 0.24 | 75.58 ± 0.63 | 17.12 ± 0.19 |
-| LSTM Baseline | 29.61 ± 0.19 | 54.80 ± 0.21 | 76.67 ± 1.52 | 16.29 ± 0.32 |
-| Class-Balanced Loss (MLP) | 28.94 ± 0.13 | 52.92 ± 0.97 | 71.98 ± 1.06 | 15.86 ± 0.61 |
-| 2D CNN Baseline | 28.20 ± 2.52 | 49.73 ± 3.84 | 70.90 ± 4.24 | 12.38 ± 0.00 |
+|| LSTM Baseline | 29.61 ± 0.19 | 54.80 ± 0.21 | 76.67 ± 1.52 | 16.29 ± 0.32 |
+|| CORAL-DeepMLP Ensemble | 28.90 ± 0.41 | 61.09 ± 0.68 | 81.93 ± 0.75 | 18.02 ± 0.43 |
+|| Class-Balanced Loss (MLP) | 28.94 ± 0.13 | 52.92 ± 0.97 | 71.98 ± 1.06 | 15.86 ± 0.61 |
+|| 2D CNN Baseline | 28.20 ± 2.52 | 49.73 ± 3.84 | 70.90 ± 4.24 | 12.38 ± 0.00 |
 | Ordinal Regression (CORAL) | 22.06 ± 0.27 | 56.96 ± 0.12 | 78.79 ± 0.37 | 13.93 ± 0.26 |
 | Ridge Regression | 19.95 ± 0.63 | 56.17 ± 0.61 | 79.37 ± 0.85 | 12.11 ± 0.31 |
 
@@ -125,7 +126,7 @@ Results are mean +/- std across 5 stratified folds on the full dataset (25,738 u
 | LSTM Baseline | 36.32 ± 0.74 | 29.61 ± 0.19 | 22.08 ± 0.50 | 16.29 ± 0.32 |
 | Multi-Channel 2D CNN | 39.44 ± 0.78 | 30.77 ± 0.41 | 17.60 ± 1.20 | 13.05 ± 0.01 |
 || Ordinal Regression (CORAL) | 36.81 ± 0.99 | 22.06 ± 0.27 | 22.29 ± 0.71 | 13.93 ± 0.26 |
-|| CORAL-DeepMLP Ensemble | 36.30 ± 0.61 | pending | 23.23 ± 0.39 | pending |
+|| CORAL-DeepMLP Ensemble | 36.30 ± 0.61 | 28.90 ± 0.41 | 23.23 ± 0.39 | 18.02 ± 0.43 |
 || Perceptron Baseline | 39.65 ± 0.60 | 31.57 ± 0.21 | 20.20 ± 0.70 | 16.66 ± 0.07 |
 | Ridge Regression | 23.94 ± 0.64 | 19.95 ± 0.63 | 11.91 ± 0.35 | 12.11 ± 0.31 |
 | Transformer Encoder | 39.75 ± 0.94 | 31.34 ± 0.36 | 18.90 ± 0.57 | 14.06 ± 0.55 |

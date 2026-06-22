@@ -32,7 +32,6 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 
-from moonboard_analysis.config import GRADE_ORDER
 from moonboard_analysis.data.loader import load_lstm_data
 from moonboard_analysis.data.preprocessing import (
     drop_duplicate_sequences,
@@ -277,7 +276,8 @@ def _extract_logits(model, loader, device):
     model.eval()
     with torch.no_grad():
         for batch in loader:
-            features = batch[0].to(device)
+            features = batch[0] if isinstance(batch, (tuple, list)) else batch
+            features = features.to(device)
             logits = model(features)
             all_logits.append(logits.cpu().numpy())
     return np.concatenate(all_logits, axis=0)
@@ -305,9 +305,9 @@ def train_and_evaluate(
     train_idx: np.ndarray,
     test_idx: np.ndarray,
     seed: int = 42,
-    epochs: int = 200,
+    epochs: int = 20,
     batch_size: int = 256,
-    learning_rate: float = 0.001,
+    learning_rate: float = 0.002,
     dropout: float = 0.15,
     patience: int = 10,
     focal_gamma: float = 2.0,
@@ -330,12 +330,20 @@ def train_and_evaluate(
 
     device = get_device()
 
+    from sklearn.model_selection import train_test_split as _tts
+    X_tr, X_val, y_tr_ord, y_val_ord = _tts(
+        X_train, y_train_ord, test_size=0.1, random_state=seed, stratify=y_train,
+    )
     train_ds = TensorDataset(
-        torch.tensor(X_train, dtype=torch.float32),
-        torch.tensor(y_train_ord, dtype=torch.float32),
+        torch.tensor(X_tr, dtype=torch.float32),
+        torch.tensor(y_tr_ord, dtype=torch.float32),
+    )
+    val_ds = TensorDataset(
+        torch.tensor(X_val, dtype=torch.float32),
+        torch.tensor(y_val_ord, dtype=torch.float32),
     )
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
-    eval_loader = DataLoader(train_ds, batch_size=batch_size * 2, shuffle=False)
+    eval_loader = DataLoader(val_ds, batch_size=batch_size * 2, shuffle=False)
     test_loader = DataLoader(
         TensorDataset(torch.tensor(X_test, dtype=torch.float32)),
         batch_size=batch_size * 2,
@@ -344,7 +352,7 @@ def train_and_evaluate(
     criterion = FocalBCELoss(gamma=focal_gamma)
 
     all_logits: list[np.ndarray] = []
-    for ensemble_seed in (seed, seed + 1):
+    for ensemble_seed in (seed, seed + 1, seed + 2, seed + 3, seed + 4):
         set_seeds(ensemble_seed)
         model = CORALNet(
             input_dim=INPUT_DIM,
@@ -354,7 +362,7 @@ def train_and_evaluate(
         ).to(device)
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=1e-4)
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode="min", factor=0.5, patience=10
+            optimizer, mode="min", factor=0.5, patience=patience
         )
         best_loss = float("inf")
         best_state = None
@@ -399,7 +407,7 @@ def main() -> None:
     all_sequences = preprocess_lstm_data(df, augment=False)
     all_sequences = drop_duplicate_sequences(all_sequences)
     print(f"After preprocessing: {len(all_sequences)} unique sequences")
-    grade_to_idx = {g: i for i, g in enumerate(GRADE_ORDER)}
+    grade_to_idx = {g: i for i, g in enumerate(GRADE_10CLASS)}
     valid_seqs, valid_grades = [], []
     for seq in all_sequences:
         grade = seq[-2]
