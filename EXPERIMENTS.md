@@ -339,6 +339,24 @@ All 14 submissions run on the full dataset (25,738 unique routes after deduplica
 - **Full-data (26K):** 37.02% exact, **68.16%** within-1, **87.23%** within-2, 18.19% macro-F1
 - **Status:** Best within-grade metrics on leaderboard. Ordinal regression is the right loss for the grade prediction task — it just doesn't maximize exact accuracy.
 
+### 3.15 CORAL-DeepMLP Ensemble (coral-deepmlp-ensemble)
+
+- **Commit:** `23b46f9` (feat/coral-deepmlp-ensemble branch)
+- **Model:** CORALNet — 4-layer MLP trunk (656→512→256→128) + CORAL ordinal head (Linear(128→1, bias=False) + coral_bias(12)). Kaiming normal initialization. Bias initialized from empirical grade distribution: bias[k] = logit(P(grade > k)).
+- **Features:** Same 656-dim features as deep-mlp-baseline (section-separated start/middle/end + 8 meta + 50 bigram hash + 3 ratios + 1 symmetry). Per-fold standardization.
+- **Loss:** FocalBCELoss(γ=2.0) on ordinal thresholds.
+- **Training:** AdamW, lr=0.002, weight_decay=1e-4, batch_size=256, ReduceLROnPlateau(factor=0.5, patience=10), early stopping patience=10, max 200 epochs, best-state checkpointing.
+- **Ensemble:** 2-model ensemble (seeds seed, seed+1), average logits.
+- **Key Observations:**
+  - 36.30% exact (2016) — below DeepMLP (40.52%), ranks ~12th
+  - **70.04% within-1 (2016) — new #1** (beats ordinal-regression 68.46%)
+  - **88.80% within-2 (2016) — new #1** (beats ordinal-regression 87.54%)
+  - **23.23% macro-F1 (2016) — new #1** (beats ordinal-regression 22.29%)
+  - CORAL + strong features = best ordinal predictions, but doesn't maximize exact accuracy
+  - 2017 results pending
+- **Full-data (26K, 2016):** 36.30% exact, 70.04% within-1, 88.80% within-2, 23.23% macro-F1
+- **Status:** New best on within-1, within-2, and macro-F1. Ordinal loss + rich features is the right combination for grade-aware prediction. Exact accuracy remains with CE-based models.
+
 ---
 
 ## 4. Feature Engineering Techniques Tried
