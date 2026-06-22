@@ -6,12 +6,22 @@ import subprocess
 import sys
 from pathlib import Path
 
-TREE_IMPORTS = frozenset({
-    "RandomForestClassifier", "RandomForestRegressor", "XGBClassifier", "XGBRegressor",
-    "LGBMClassifier", "LGBMRegressor", "CatBoostClassifier", "CatBoostRegressor",
-    "GradientBoostingClassifier", "GradientBoostingRegressor",
-    "DecisionTreeClassifier", "DecisionTreeRegressor",
-})
+TREE_IMPORTS = frozenset(
+    {
+        "RandomForestClassifier",
+        "RandomForestRegressor",
+        "XGBClassifier",
+        "XGBRegressor",
+        "LGBMClassifier",
+        "LGBMRegressor",
+        "CatBoostClassifier",
+        "CatBoostRegressor",
+        "GradientBoostingClassifier",
+        "GradientBoostingRegressor",
+        "DecisionTreeClassifier",
+        "DecisionTreeRegressor",
+    }
+)
 WEIGHT_EXTS = frozenset({".pth", ".joblib", ".h5", ".onnx", ".pt", ".pkl", ".keras"})
 
 
@@ -35,7 +45,9 @@ def _ast_names(tree: ast.AST) -> set[str]:
 
 
 def _has_func(tree: ast.AST, name: str) -> bool:
-    return any(isinstance(n, ast.FunctionDef) and n.name == name for n in ast.iter_child_nodes(tree))
+    return any(
+        isinstance(n, ast.FunctionDef) and n.name == name for n in ast.iter_child_nodes(tree)
+    )
 
 
 def _load_tree(main_py: Path) -> ast.AST | None:
@@ -53,14 +65,23 @@ def _check_interface(submission_dir: Path) -> tuple[bool, str]:
         return False, "main.py not found or has syntax errors"
     if not _has_func(tree, "train_and_evaluate"):
         return False, "must define train_and_evaluate()"
-    fn = next(n for n in ast.iter_child_nodes(tree) if isinstance(n, ast.FunctionDef) and n.name == "train_and_evaluate")
+    fn = next(
+        n
+        for n in ast.iter_child_nodes(tree)
+        if isinstance(n, ast.FunctionDef) and n.name == "train_and_evaluate"
+    )
     if len(fn.args.args) < 4:
-        return False, "train_and_evaluate() must accept (sequences, grades, train_idx, test_idx, ...)"
+        return (
+            False,
+            "train_and_evaluate() must accept (sequences, grades, train_idx, test_idx, ...)",
+        )
     return True, ""
 
 
 def _check_no_weights(submission_dir: Path) -> tuple[bool, str]:
-    found = [f.name for f in submission_dir.rglob("*") if f.suffix.lower() in WEIGHT_EXTS and f.is_file()]
+    found = [
+        f.name for f in submission_dir.rglob("*") if f.suffix.lower() in WEIGHT_EXTS and f.is_file()
+    ]
     if found:
         return False, f"found weight files: {', '.join(found)}"
     return True, ""
@@ -104,8 +125,18 @@ def _check_feature_redundancy(main_py: Path) -> list[str]:
     has_matrix = any(f in source for f in ("hold_to_matrix", "sequences_to_matrices"))
     has_sections = any(f in funcs for f in ("_extract_sections", "_section_to_vector"))
 
-    flat_funcs = {"_sequences_to_vectors", "sequences_to_vectors", "_hold_to_index", "hold_to_index"}
-    if (flat_funcs & funcs or "HOLD_VECTOR_DIM" in source) and not has_grid and not has_lstm and not has_sections:
+    flat_funcs = {
+        "_sequences_to_vectors",
+        "sequences_to_vectors",
+        "_hold_to_index",
+        "hold_to_index",
+    }
+    if (
+        (flat_funcs & funcs or "HOLD_VECTOR_DIM" in source)
+        and not has_grid
+        and not has_lstm
+        and not has_sections
+    ):
         warnings.append("Flat 198-dim binary hold vector — fast-mlp/perceptron territory")
     if has_grid:
         warnings.append("GridMapper / grid binary vector — ridge/tree territory (164-dim)")
@@ -120,10 +151,19 @@ def _check_feature_redundancy(main_py: Path) -> list[str]:
 
 def _check_ruff(submission_dir: Path) -> list[str]:
     try:
-        result = subprocess.run(["uv", "run", "ruff", "check", str(submission_dir)], capture_output=True, text=True, timeout=60)
+        result = subprocess.run(
+            ["uv", "run", "ruff", "check", str(submission_dir)],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
     except (FileNotFoundError, subprocess.TimeoutExpired) as e:
         return [f"ruff check unavailable: {e}"]
-    issues = [line for line in result.stdout.splitlines() if line.strip() and "All checks passed" not in line]
+    issues = [
+        line
+        for line in result.stdout.splitlines()
+        if line.strip() and "All checks passed" not in line
+    ]
     if result.returncode != 0 and not issues:
         issues = [f"ruff exited with code {result.returncode}"]
     return issues
@@ -137,7 +177,11 @@ def _timing_warn(main_py: Path, max_samples: int) -> tuple[bool, str]:
     source = main_py.read_text()
     epochs = 0
     for node in ast.walk(tree):
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "add_argument":
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "add_argument"
+        ):
             for arg in node.args:
                 if isinstance(arg, ast.Constant) and arg.value == "--epochs":
                     for kw in node.keywords:
@@ -167,7 +211,13 @@ def _relevant_sections(text: str) -> list[str]:
     lines = text.splitlines()
     keep = []
     capture = False
-    kw = ["leaderboard", "decision matrix", "feature engineering", "submission gate", "training technique"]
+    kw = [
+        "leaderboard",
+        "decision matrix",
+        "feature engineering",
+        "submission gate",
+        "training technique",
+    ]
     for line in lines:
         if line.startswith("## ") and any(k in line.lower() for k in kw):
             capture = True
@@ -187,7 +237,8 @@ def main() -> None:
 
     sub_dir = Path(args.submission_dir)
     if not sub_dir.is_dir():
-        print(f"[FAIL] Interface contract — dir not found: {sub_dir}"); sys.exit(1)
+        print(f"[FAIL] Interface contract — dir not found: {sub_dir}")
+        sys.exit(1)
     main_py = sub_dir / "main.py"
     passed = failed = 0
     warnings: list[str] = []
@@ -207,6 +258,15 @@ def main() -> None:
             print(f"[FAIL] {label} — {msg}")
             failed += 1
 
+    # Check for config provenance support
+    source = main_py.read_text() if main_py.exists() else ""
+    if "get_config" not in source and "CONFIG" not in source:
+        print(
+            "[WARN] Config provenance — no get_config() function or CONFIG dict found; "
+            "hyperparameter config will not be recorded in results"
+        )
+        warnings.append("Missing get_config() or CONFIG for provenance tracking")
+
     for w in _check_feature_redundancy(main_py):
         print(f"[WARN] Feature redundancy — {w}")
         warnings.append(w)
@@ -214,16 +274,18 @@ def main() -> None:
     if args.max_samples is not None:
         warn, msg = _timing_warn(main_py, args.max_samples)
         if warn:
-            print(f"[WARN] Training time — {msg}"); warnings.append(msg)
+            print(f"[WARN] Training time — {msg}")
+            warnings.append(msg)
         else:
             print("[PASS] Training time estimate")
 
     issues = _check_ruff(sub_dir)
     if issues:
         for issue in issues[:10]:
-            print(f"[WARN] Code quality — {issue}"); warnings.append(issue)
+            print(f"[WARN] Code quality — {issue}")
+            warnings.append(issue)
         if len(issues) > 10:
-            print(f"[WARN] Code quality — ... and {len(issues)-10} more")
+            print(f"[WARN] Code quality — ... and {len(issues) - 10} more")
     else:
         print("[PASS] Code quality (ruff)")
 

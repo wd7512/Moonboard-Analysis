@@ -11,7 +11,10 @@ Usage:
 """
 
 import argparse
+import hashlib
 import importlib.util
+import json
+import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -71,6 +74,60 @@ def parse_args() -> argparse.Namespace:
         help="Maximum samples (default: all). Prefer moonboard-smoke-test for fast checks.",
     )
     return parser.parse_args()
+
+
+def compute_file_sha256(path: str | Path) -> str:
+    """Compute SHA256 hash of a file."""
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def get_git_commit_sha() -> str:
+    """Get the current git commit SHA of src/ (the repository)."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except (subprocess.SubprocessError, FileNotFoundError):
+        pass
+    return "unknown"
+
+
+def extract_submission_config(submission_dir: str) -> dict | None:
+    """Try to extract hyperparameter config from a submission module.
+
+    Checks for a get_config() function or a CONFIG dict.
+    Returns None if neither exists (backwards compatible).
+    """
+    main_path = Path(submission_dir) / "main.py"
+    if not main_path.exists():
+        return None
+    spec = importlib.util.spec_from_file_location("submission_config", str(main_path))
+    if spec is None or spec.loader is None:
+        return None
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+    except Exception:
+        return None
+    if hasattr(module, "get_config") and callable(module.get_config):
+        try:
+            cfg = module.get_config()
+            if isinstance(cfg, dict):
+                return cfg
+        except Exception:
+            pass
+    if hasattr(module, "CONFIG") and isinstance(module.CONFIG, dict):
+        return module.CONFIG
+    return None
 
 
 def load_submission(submission_dir: str):
@@ -134,6 +191,9 @@ def generate_markdown_report(
     submission_dir: str,
     data_path: str,
     n_splits: int,
+    data_sha256: str = "",
+    git_commit_sha: str = "",
+    config: dict | None = None,
 ) -> str:
     """Generate a comprehensive Markdown report of CV benchmark results.
 
@@ -142,6 +202,9 @@ def generate_markdown_report(
         submission_dir: Path to evaluated submission.
         data_path: Path to evaluation data.
         n_splits: Number of CV folds.
+        data_sha256: SHA256 hash of the data file.
+        git_commit_sha: Git commit SHA of the repository.
+        config: Hyperparameter configuration dict (optional).
 
     Returns:
         Formatted Markdown string.
@@ -157,6 +220,12 @@ def generate_markdown_report(
     lines.append(f"- **Data**: {data_path}")
     lines.append(f"- **Timestamp**: {datetime.now().isoformat()}")
     lines.append(f"- **CV Folds**: {n_splits}")
+    if data_sha256:
+        lines.append(f"- **Data SHA256**: `{data_sha256}`")
+    if git_commit_sha:
+        lines.append(f"- **Git Commit**: `{git_commit_sha}`")
+    if config:
+        lines.append(f"- **Config**: `{json.dumps(config)}`")
     lines.append("")
 
     lines.append("## Overall Metrics")
@@ -222,6 +291,7 @@ def main() -> None:
     if args.max_samples is not None and args.max_samples < num_samples:
         # Sample with stratification by grade to maintain class distribution
         from collections import defaultdict
+
         grade_indices = defaultdict(list)
         for i, g in enumerate(encoded_grades):
             grade_indices[g].append(i)
@@ -268,17 +338,36 @@ def main() -> None:
     print(f"\nMean scores: {results.mean_scores()}")
     print(f"Std scores:  {results.std_scores()}")
 
-    # Write JSON output
+    # Compute provenance info
+    data_sha256 = compute_file_sha256(data_path)
+    git_commit_sha = get_git_commit_sha()
+    submission_config = extract_submission_config(args.submission_dir)
+
+    # Write JSON output (enriched with provenance)
     output_json = Path(args.output_json)
     output_json.parent.mkdir(parents=True, exist_ok=True)
-    json_str = results.to_json()
-    output_json.write_text(json_str)
+    json_data = json.loads(results.to_json())
+    json_data["provenance"] = {
+        "data_sha256": data_sha256,
+        "git_commit_sha": git_commit_sha,
+        "timestamp": datetime.now().isoformat(),
+        "config": submission_config,
+    }
+    output_json.write_text(json.dumps(json_data, indent=2))
     print(f"JSON results written to {output_json}")
 
     # Write Markdown output
     output_markdown = Path(args.output_markdown)
     output_markdown.parent.mkdir(parents=True, exist_ok=True)
-    markdown = generate_markdown_report(results, args.submission_dir, data_path, n_splits)
+    markdown = generate_markdown_report(
+        results,
+        args.submission_dir,
+        data_path,
+        n_splits,
+        data_sha256=data_sha256,
+        git_commit_sha=git_commit_sha,
+        config=submission_config,
+    )
     output_markdown.write_text(markdown)
     print(f"Markdown report written to {output_markdown}")
 
