@@ -42,5 +42,9 @@
     "within_one_grade": 0.004621652187207983,
     "within_two_grades": 0.003005795969077426,
     "macro_f1": 0.007307851059332012
+  },
+  "provenance": {
+    "data_sha256": "f0b035f53d8aef73fcadd3cbfe23ac776856b3d2d714928089c2d54d63abdcc8",
+    "git_commit_sha": "unknown"
   }
 }
