@@ -308,7 +308,7 @@ def train_and_evaluate(
     batch_size: int = 256,
     learning_rate: float = 0.001,
     dropout: float = 0.15,
-    patience: int = 25,
+    patience: int = 10,
     focal_gamma: float = 2.0,
 ) -> dict[str, float]:
     train_seqs = [sequences[i] for i in train_idx]
