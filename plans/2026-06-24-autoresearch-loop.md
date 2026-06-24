@@ -195,8 +195,8 @@ This is leak-safe: rank reveals position but not precision. Delta bucket is 1-bi
 2. Agent creates/modifies `submissions/<name>/main.py` + optionally `submissions/<name>/features.py`
 3. Agent calls: `python orchestrator/run_experiment.py <name>`
 4. Controller (frozen):
-   a. Spawns `harness/evaluate.py submissions/<name> --smoke` as subprocess
-   b. Smoke gate: grep for forbidden patterns → fail if found
+   a. Spawns `sandbox-exec -f eval.sb harness/evaluate.py submissions/<name> --smoke` — Seatbelt restricts FS/network at kernel level
+   b. Smoke gate: transitive grep for forbidden patterns → defense-in-depth, fail if found
    c. Smoke gate fails → log to runs.jsonl + feedback.jsonl, return status=smoke_fail
    d. Smoke gate passes → spawn `harness/evaluate.py submissions/<name> --full`
    e. Full CV runs with RNG pinned at fit time
@@ -263,19 +263,41 @@ It does NOT predict final CV score. If the submission trains without crashing fo
 8. Integration test: run baseline through the full loop manually
 9. Launch first overnight run
 
+## Containerization Decision: Skip Docker, Use Seatbelt
+
+**Decision:** Do NOT use Docker for v1. Use macOS `sandbox-exec` (Seatbelt) instead.
+
+**Rationale:**
+- Docker Desktop on macOS requires a running daemon — single point of failure on a laptop that may sleep overnight
+- Docker Desktop consumes ~2GB RAM — starves eval subprocess on a memory-constrained MacBook
+- Container startup overhead (1-3s × 30 evals) is acceptable but unnecessary when Seatbelt is free
+- Seatbelt provides kernel-level FS + network isolation at fork/exec time — cannot be bypassed by Python string tricks
+- Seatbelt has zero daemon, zero image, zero RAM overhead — built into macOS
+
+**Seatbelt approach:**
+- `sandbox-exec -f eval.sb python submissions/<name>/main.py`
+- `.sb` profile restricts: only Python stdlib + venv + eval tmpdir visible
+- Global CSV unreachable at kernel level (no path in allowed subpaths)
+- Network outbound denied by default in profile
+- One-time setup (write `.sb` file), not per-eval
+
+**Keep grep as defense-in-depth:** catches bugs in the sandbox profile itself, and provides fast-fail before spawning the subprocess.
+
 ## Risks and Mitigations
 
 | Risk | Mitigation |
 |------|------------|
 | Agent plateau on one approach | Stuck detection → revert champion + small change |
 | Agent produces inscrutable optimized code | Quantized feedback prevents overfitting to specific thresholds |
-| Agent memorizes test folds | Sandboxed cwd + rootless arrays + transitive grep |
+| Agent memorizes test folds | Seatbelt sandbox + rootless arrays + transitive grep (3 layers) |
 | Agent corrupts own log | logs/runs.jsonl outside agent read scope |
 | Agent hacks the judge | harness/ and orchestrator/ outside agent edit scope |
 | Agent sees scores it shouldn't | Read-scope permissions in opencode.json |
 | Champion is lucky draw (stochastic) | Reproducibility check (2x run, reject if drift > 0.5pp) |
 | No champion produced all night | Quantized rank+trajectory gives ~10-20% acceptance rate |
 | Binary feedback makes loop sterile | Middle-ground: rank + delta bucket + trajectory (not raw, not binary) |
+| Docker daemon sleeps on laptop | Seatbelt has zero daemon — always available |
+| Sandbox profile too restrictive for Python | One-time tuning of .sb allowlist, then frozen |
 
 ## Cost Estimate
 
